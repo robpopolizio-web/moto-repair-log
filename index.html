@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Moto Repair Log: what actually broke, and what it cost</title>
-<meta name="description" content="Log the repairs on your motorcycle and see what other owners of the same model have had to fix. No account needed.">
+<title>Moto Repair Log: what actually broke, and at what mileage</title>
+<meta name="description" content="Log which parts failed on your motorcycle and at what mileage. See what other owners of the same model have had to fix. No account needed.">
 <style>
   :root {
     --bg: #f5f3ee; --card: #fff; --ink: #1c1c1a; --muted: #6a675f; --line: #e2ded4;
@@ -27,17 +27,16 @@
   textarea { min-height: 72px; resize: vertical; }
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
   .row-odo { display: grid; grid-template-columns: 1fr 90px; gap: 10px; }
-  .row > div > label, .row3 > div > label, .row-odo > div > label { margin-top: 12px; }
+  .row > div > label { margin-top: 12px; }
   button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--ink); background: var(--ink);
     color: #fff; padding: 11px 16px; font-weight: 600; }
   button:disabled { opacity: .55; cursor: default; }
   button.secondary { background: transparent; color: var(--ink); }
   button.link { background: none; border: 0; color: var(--accent); padding: 0; font-weight: 600; }
   .actions { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
-  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
-  .seg button { background: #fff; color: var(--ink); border: 1px solid #d6d1c5; font-weight: 500; padding: 10px 6px; font-size: .9rem; line-height: 1.25; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .seg button { background: #fff; color: var(--ink); border: 1px solid #d6d1c5; font-weight: 500; padding: 10px 6px; font-size: .92rem; line-height: 1.25; }
   .seg button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 16px 0 0; }
   .tab { background: #fff; color: var(--ink); border: 1px solid var(--line); font-weight: 500; padding: 8px 12px; font-size: .9rem; }
@@ -49,16 +48,13 @@
   .note { font-size: .88rem; color: var(--muted); margin: 8px 0 0; }
   .entry { border-top: 1px solid var(--line); padding: 12px 0; }
   .entry:first-of-type { border-top: 0; }
-  .entry-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
   .entry-title { font-weight: 600; }
   .badge { display: inline-block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
     padding: 2px 7px; border-radius: 999px; margin-right: 6px; vertical-align: 1px; }
   .b-repair { background: var(--accent-soft); color: var(--accent); }
-  .b-service { background: #e8eef7; color: #2c4f80; }
   .b-checkin { background: #e6f2e8; color: var(--ok); }
   .meta { color: var(--muted); font-size: .88rem; }
   .detail { font-size: .92rem; margin-top: 2px; }
-  .cost { white-space: nowrap; font-weight: 600; }
   .empty { color: var(--muted); font-size: .95rem; }
   .error { color: var(--err); font-size: .92rem; }
   .what-counts { font-size: .9rem; color: var(--muted); }
@@ -74,19 +70,17 @@
   .toast.show { opacity: 1; }
   .hidden { display: none !important; }
   @media (max-width: 560px) { .when-odo { grid-template-columns: 1fr; } }
-  @media (max-width: 420px) { .row3 { grid-template-columns: 1fr 1fr; } .row3 > div:last-child { grid-column: span 2; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1 id="appName">Moto Repair Log</h1>
-    <p class="lede">Log what actually broke on your bike and what it cost you. See what other owners of the same model have had to fix. No account, takes a minute.</p>
+    <p class="lede">Log which parts failed on your bike and at what mileage. See what other owners of the same model have had to fix. No account, takes a minute.</p>
     <details class="what-counts">
       <summary>What should I log?</summary>
       <ul>
-        <li><b>Something broke:</b> anything that failed or wore out early and needed fixing, including warranty and recall work (mark who paid).</li>
-        <li><b>Scheduled service:</b> optional. Valve checks, big services, anything from the service schedule.</li>
+        <li><b>Something failed:</b> any part that failed or wore out early, including ones fixed under warranty or recall. Skip routine wear items like oil, tires, brake pads and chains.</li>
         <li><b>Nothing broke yet:</b> just as useful. Bikes with zero problems need to count too, or the numbers only reflect the unlucky owners.</li>
       </ul>
     </details>
@@ -147,83 +141,37 @@
     <div class="card">
       <h2>Add an entry</h2>
       <div class="seg" role="group" aria-label="Entry type">
-        <button type="button" data-type="repair" aria-pressed="true">Something broke</button>
-        <button type="button" data-type="service" aria-pressed="false">Scheduled service</button>
+        <button type="button" data-type="repair" aria-pressed="true">Something failed</button>
         <button type="button" data-type="checkin" aria-pressed="false">Nothing broke yet</button>
       </div>
       <form id="entryForm" novalidate>
+        <div data-show="repair">
+          <label for="fixed">What part failed?</label>
+          <input id="fixed" maxlength="300" placeholder="e.g. Regulator/rectifier">
+          <label for="category">Part of the bike</label>
+          <select id="category"></select>
+        </div>
+
         <div class="row when-odo">
           <div>
-            <label for="date">When</label>
-            <input id="date" type="month" required>
-          </div>
-          <div>
-            <label for="odometer">Odometer</label>
-            <div class="row-odo" style="margin:0">
+            <label for="odometer" id="odoLabel">Bike mileage at the time</label>
+            <div class="row-odo">
               <input id="odometer" type="number" inputmode="numeric" min="0" placeholder="e.g. 18400" required>
               <select id="unit" aria-label="Distance unit"><option>km</option><option>mi</option></select>
             </div>
           </div>
-        </div>
-
-        <div data-show="repair">
-          <label for="category">What part of the bike?</label>
-          <select id="category"></select>
-        </div>
-
-        <div data-show="repair service">
-          <label for="what" id="whatLabel">What failed?</label>
-          <input id="what" maxlength="300" placeholder="e.g. Regulator/rectifier died, battery stopped charging">
-          <label for="parts">Parts replaced <span class="hint">(optional)</span></label>
-          <input id="parts" maxlength="300" placeholder="e.g. Reg/rec, battery">
-          <div class="row3">
-            <div>
-              <label for="costParts">Parts cost</label>
-              <input id="costParts" type="number" inputmode="decimal" min="0" step="any" placeholder="0">
-            </div>
-            <div>
-              <label for="costLabor">Labor cost</label>
-              <input id="costLabor" type="number" inputmode="decimal" min="0" step="any" placeholder="0">
-            </div>
-            <div>
-              <label for="currency">Currency</label>
-              <select id="currency">
-                <option>USD</option><option>EUR</option><option>GBP</option><option>CAD</option>
-                <option>AUD</option><option>NZD</option><option>CHF</option><option>SEK</option>
-                <option>NOK</option><option>DKK</option><option>PLN</option><option>INR</option>
-                <option>BRL</option><option>ZAR</option><option>JPY</option><option>Other</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="row" data-show="repair service">
-          <div data-show="repair">
-            <label for="paidBy">Who paid?</label>
-            <select id="paidBy">
-              <option value="Me">Me</option>
-              <option value="Warranty">Warranty</option>
-              <option value="Recall">Recall</option>
-              <option value="Insurance">Insurance</option>
-            </select>
-          </div>
           <div>
-            <label for="whoFixed">Who did the work?</label>
-            <select id="whoFixed">
-              <option value="">Choose</option>
-              <option>Myself</option>
-              <option>Dealer</option>
-              <option>Independent shop</option>
-            </select>
+            <label for="date">When <span class="hint">(roughly)</span></label>
+            <input id="date" type="month">
           </div>
         </div>
 
-        <label for="notes" id="notesLabel">Notes <span class="hint">(optional)</span></label>
-        <textarea id="notes" maxlength="500" placeholder="Symptoms, how it was diagnosed, anything another owner should know"></textarea>
+        <label for="notes">Notes <span class="hint">(optional)</span></label>
+        <textarea id="notes" maxlength="500" placeholder="Symptoms, anything another owner should know"></textarea>
 
         <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" tabindex="-1" autocomplete="off"></div>
         <p id="entryError" class="error hidden" role="alert"></p>
-        <div class="actions"><button type="submit" id="saveBtn">Save repair</button></div>
+        <div class="actions"><button type="submit" id="saveBtn">Save</button></div>
       </form>
     </div>
 
@@ -251,7 +199,7 @@
 
   /* ======== CONFIG: edit these ======== */
   var CONFIG = {
-    API_URL: 'https://script.google.com/macros/s/AKfycbxY7IrSAkGdcPoNhGjTAbz3x5QSuM5GAw6Z9hfBC0dooyTDQohpkaa3mvKn8R-JxLy3cw/exec',               // paste the Apps Script web app URL (ends in /exec)
+    API_URL: 'https://script.google.com/macros/s/AKfycbxY7IrSAkGdcPoNhGjTAbz3x5QSuM5GAw6Z9hfBC0dooyTDQohpkaa3mvKn8R-JxLy3cw/exec',
     APP_NAME: 'Moto Repair Log'
   };
   /* ==================================== */
@@ -261,8 +209,8 @@
   var CATEGORIES = ['Engine', 'Electrical & lights', 'Battery & charging', 'Fuel system', 'Cooling',
     'Clutch & gearbox', 'Final drive', 'Brakes & ABS', 'Suspension & steering', 'Wheels & bearings',
     'Frame & bodywork', 'Electronics & dash', 'Other'];
-  var TYPE_LABEL = { repair: 'Repair', service: 'Service', checkin: 'No repairs' };
-  var SAVE_LABEL = { repair: 'Save repair', service: 'Save service', checkin: 'Save check-in' };
+  var TYPE_LABEL = { repair: 'Failed', checkin: 'No repairs' };
+  var KM_PER_MI = 1.609344;
 
   /* ---------- helpers ---------- */
   var $ = function (id) { return document.getElementById(id); };
@@ -310,28 +258,17 @@
   function computeStats(rows) {
     var owners = {}; rows.forEach(function (r) { owners[r.garage_id] = 1; });
     var repairs = rows.filter(function (r) { return r.type === 'repair'; });
-    var services = rows.filter(function (r) { return r.type === 'service'; }).length;
     var cats = {}; repairs.forEach(function (r) { cats[r.category] = (cats[r.category] || 0) + 1; });
     var top = Object.keys(cats).map(function (k) { return [k, cats[k]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 3);
-    var byCur = {};
-    repairs.forEach(function (r) {
-      if (r.paid_by !== 'Me' || !r.currency) return;
-      var t = (Number(r.cost_parts) || 0) + (Number(r.cost_labor) || 0);
-      if (t > 0) (byCur[r.currency] = byCur[r.currency] || []).push(t);
-    });
-    var typical = null;
-    Object.keys(byCur).forEach(function (c) {
-      var a = byCur[c]; if (typical && a.length <= typical.n) return;
-      a.sort(function (x, y) { return x - y; });
-      var mid = Math.floor(a.length / 2), med = a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
-      typical = { currency: c, median: Math.round(med), n: a.length };
-    });
-    return { owners: Object.keys(owners).length, repairs: repairs.length, services: services, topCategories: top, typicalCost: typical };
+    var kms = repairs.map(function (r) { var o = Number(r.odometer) || 0; return r.unit === 'mi' ? o * KM_PER_MI : o; })
+      .filter(function (x) { return x > 0; }).sort(function (a, b) { return a - b; });
+    var med = null;
+    if (kms.length) { var mid = Math.floor(kms.length / 2); med = Math.round(kms.length % 2 ? kms[mid] : (kms[mid - 1] + kms[mid]) / 2); }
+    return { owners: Object.keys(owners).length, repairs: repairs.length, topCategories: top, medianKm: med };
   }
 
   /* ---------- demo backend (localStorage) ---------- */
-  var PUBLIC = ['entry_id', 'created_at', 'brand', 'model', 'year', 'country', 'type', 'date', 'odometer', 'unit', 'category',
-    'what_failed', 'parts', 'cost_parts', 'cost_labor', 'currency', 'paid_by', 'who_fixed', 'notes'];
+  var PUBLIC = ['entry_id', 'created_at', 'brand', 'model', 'year', 'country', 'type', 'date', 'odometer', 'unit', 'category', 'part_failed', 'notes'];
   function pub(r) { var o = {}; PUBLIC.forEach(function (f) { o[f] = r[f]; }); return o; }
   var demo = {
     rows: function () { return store.get('mrl_demo_rows', []); },
@@ -354,8 +291,7 @@
         e.entry_id = newGarageId().slice(0, 12).replace(/[^a-f0-9]/g, 'a');
         e.created_at = new Date().toISOString();
         e.garage_id = b.garage; e.model_key = key(b.model);
-        if (b.type === 'service') { e.category = 'Service'; e.paid_by = 'Me'; }
-        if (b.type === 'checkin') { e.category = 'No repairs'; e.what_failed = e.parts = e.cost_parts = e.cost_labor = e.currency = e.paid_by = e.who_fixed = ''; }
+        if (b.type === 'checkin') { e.category = 'No repairs'; e.part_failed = ''; }
         rows.push(e); store.set('mrl_demo_rows', rows);
         return { ok: true, entry: pub(e) };
       }
@@ -387,7 +323,7 @@
   if (!/^[a-z0-9]{12,32}$/.test(garage)) { garage = newGarageId(); store.set('mrl_garage', garage); }
   var bikes = store.get('mrl_bikes', []);
   var activeKey = store.get('mrl_active', bikes[0] ? bikeKey(bikes[0]) : '');
-  var prefs = store.get('mrl_prefs', { unit: 'km', currency: 'USD' });
+  var unitPref = store.get('mrl_unit', 'km');
   var entries = [];
   var entryType = 'repair';
   var logState = 'loading';
@@ -403,23 +339,22 @@
   }
 
   /* ---------- init UI ---------- */
-  document.title = CONFIG.APP_NAME + ': what actually broke, and what it cost';
+  document.title = CONFIG.APP_NAME + ': what actually broke, and at what mileage';
   $('appName').textContent = CONFIG.APP_NAME;
   show($('demoBanner'), !CONFIG.API_URL);
+  $('brand').appendChild(el('option', { value: '', text: 'Choose brand' }));
   BRANDS.forEach(function (b) { $('brand').appendChild(el('option', { value: b, text: b })); });
-  $('brand').insertBefore(el('option', { value: '', text: 'Choose brand' }), $('brand').firstChild);
-  $('brand').value = '';
   CATEGORIES.forEach(function (c) { $('category').appendChild(el('option', { value: c, text: c })); });
   $('year').max = new Date().getFullYear() + 1;
   $('email').value = store.get('mrl_email', '');
-  $('unit').value = prefs.unit; $('currency').value = prefs.currency;
+  $('unit').value = unitPref;
   $('garageCode').textContent = garage;
 
   function resetEntryDefaults() {
     var d = new Date();
     $('date').value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-    ['odometer', 'what', 'parts', 'costParts', 'costLabor', 'notes', 'website'].forEach(function (id) { $(id).value = ''; });
-    $('paidBy').value = 'Me'; $('whoFixed').value = ''; $('category').value = CATEGORIES[0];
+    ['odometer', 'fixed', 'notes', 'website'].forEach(function (id) { $(id).value = ''; });
+    $('category').value = CATEGORIES[0];
   }
   resetEntryDefaults();
 
@@ -461,10 +396,8 @@
     document.querySelectorAll('#entryForm [data-show]').forEach(function (n) {
       show(n, n.getAttribute('data-show').split(' ').indexOf(t) >= 0);
     });
-    $('whatLabel').textContent = t === 'service' ? 'What was done?' : 'What failed?';
-    $('what').placeholder = t === 'service' ? 'e.g. 24,000 km valve check and service' : 'e.g. Regulator/rectifier died, battery stopped charging';
-    $('notes').placeholder = t === 'checkin' ? 'Anything worth knowing about the bike so far' : 'Symptoms, how it was diagnosed, anything another owner should know';
-    $('saveBtn').textContent = SAVE_LABEL[t];
+    $('odoLabel').textContent = t === 'checkin' ? 'Current bike mileage' : 'Bike mileage at the time';
+    $('notes').placeholder = t === 'checkin' ? 'Anything worth knowing about the bike so far' : 'Symptoms, anything another owner should know';
     show($('entryError'), false);
   }
   document.querySelectorAll('.seg button').forEach(function (b) {
@@ -477,22 +410,19 @@
     ev.preventDefault();
     var bike = activeBike(); if (!bike) return;
     var odo = $('odometer').value.trim();
-    var what = $('what').value.trim();
+    var fixed = $('fixed').value.trim();
     var err = '';
-    if (!$('date').value) err = 'Add the month it happened.';
-    else if (odo === '' || +odo < 0) err = 'Add the odometer reading.';
-    else if (entryType !== 'checkin' && !what) err = entryType === 'service' ? 'Describe what was done.' : 'Describe what failed.';
+    if (entryType === 'repair' && !fixed) err = 'Say which part failed.';
+    else if (odo === '' || +odo < 0) err = 'Add the bike mileage.';
     $('entryError').textContent = err; show($('entryError'), !!err);
     if (err) return;
 
-    prefs = { unit: $('unit').value, currency: $('currency').value }; store.set('mrl_prefs', prefs);
+    unitPref = $('unit').value; store.set('mrl_unit', unitPref);
     var body = {
       action: 'add', garage: garage, source: store.get('mrl_src', ''), email: store.get('mrl_email', ''),
       brand: bike.brand, model: bike.model, year: bike.year, country: bike.country,
-      type: entryType, date: $('date').value, odometer: odo, unit: $('unit').value,
-      category: $('category').value, what_failed: what, parts: $('parts').value.trim(),
-      cost_parts: $('costParts').value.trim(), cost_labor: $('costLabor').value.trim(), currency: $('currency').value,
-      paid_by: $('paidBy').value, who_fixed: $('whoFixed').value, notes: $('notes').value.trim(), website: $('website').value
+      type: entryType, date: $('date').value, odometer: odo, unit: unitPref,
+      category: $('category').value, part_failed: fixed, notes: $('notes').value.trim(), website: $('website').value
     };
     var btn = $('saveBtn'); btn.disabled = true; btn.textContent = 'Saving…';
     apiPost(body).then(function (res) {
@@ -503,7 +433,7 @@
     }).catch(function (e) {
       $('entryError').textContent = e.message === 'timeout' ? 'The log did not answer. Check your connection and try again.' : e.message;
       show($('entryError'), true);
-    }).then(function () { btn.disabled = false; btn.textContent = SAVE_LABEL[entryType]; });
+    }).then(function () { btn.disabled = false; btn.textContent = 'Save'; });
   });
 
   /* ---------- loading ---------- */
@@ -568,11 +498,15 @@
 
   function renderStats(bike, s) {
     var body = $('statsBody'); body.textContent = '';
-    var cost = s.typicalCost ? fmtNum(s.typicalCost.median) + ' ' + s.typicalCost.currency : '–';
+    var mileage = '–';
+    if (s.medianKm != null) {
+      var v = unitPref === 'mi' ? s.medianKm / KM_PER_MI : s.medianKm;
+      mileage = fmtNum(Math.round(v / 100) * 100) + ' ' + unitPref;
+    }
     body.appendChild(el('div', { class: 'stats' }, [
       el('div', { class: 'stat' }, [el('b', { text: fmtNum(s.owners) }), el('span', { text: s.owners === 1 ? 'owner' : 'owners' })]),
-      el('div', { class: 'stat' }, [el('b', { text: fmtNum(s.repairs) }), el('span', { text: s.repairs === 1 ? 'repair logged' : 'repairs logged' })]),
-      el('div', { class: 'stat' }, [el('b', { text: cost }), el('span', { text: 'typical owner-paid repair' })])
+      el('div', { class: 'stat' }, [el('b', { text: fmtNum(s.repairs) }), el('span', { text: s.repairs === 1 ? 'failure logged' : 'failures logged' })]),
+      el('div', { class: 'stat' }, [el('b', { text: mileage }), el('span', { text: 'typical mileage at failure' })])
     ]));
     if (s.topCategories && s.topCategories.length) {
       body.appendChild(el('p', { class: 'note', text: 'Most common: ' + s.topCategories.map(function (c) { return c[0] + ' (' + c[1] + ')'; }).join(', ') }));
@@ -593,7 +527,7 @@
     }
     var k = bikeKey(bike);
     var mine = entries.filter(function (e) { return bikeKey(e) === k; })
-      .sort(function (a, b) { return (b.date || '').localeCompare(a.date || '') || (b.created_at || '').localeCompare(a.created_at || ''); });
+      .sort(function (a, b) { return (Number(b.odometer) || 0) - (Number(a.odometer) || 0) || (b.created_at || '').localeCompare(a.created_at || ''); });
     if (!mine.length) {
       body.appendChild(el('p', { class: 'empty', text: 'Nothing logged for this bike yet. If nothing has ever broken, choose “Nothing broke yet” so the bike still counts.' }));
       return;
@@ -602,10 +536,8 @@
   }
 
   function entryNode(e) {
-    var total = (Number(e.cost_parts) || 0) + (Number(e.cost_labor) || 0);
-    var title = e.type === 'checkin' ? 'No repairs so far' : (e.type === 'repair' ? e.category + ': ' : '') + (e.what_failed || '');
-    var meta = [monthLabel(e.date), e.odometer !== '' ? fmtNum(e.odometer) + ' ' + e.unit : ''].filter(Boolean).join(' · ');
-    var who = [e.type === 'repair' && e.paid_by ? 'Paid by: ' + e.paid_by : '', e.who_fixed ? 'Work: ' + e.who_fixed : ''].filter(Boolean).join(' · ');
+    var title = e.type === 'checkin' ? 'No repairs so far' : e.category + ': ' + (e.part_failed || '');
+    var meta = [e.odometer !== '' ? fmtNum(e.odometer) + ' ' + e.unit : '', monthLabel(e.date)].filter(Boolean).join(' · ');
     var del = el('button', { type: 'button', class: 'link', text: 'Delete' });
     var armed = false, timer;
     del.addEventListener('click', function () {
@@ -617,13 +549,8 @@
       }).catch(function () { del.disabled = false; armed = false; del.textContent = 'Delete'; toast('Could not delete. Try again.'); });
     });
     return el('div', { class: 'entry' }, [
-      el('div', { class: 'entry-top' }, [
-        el('div', { class: 'entry-title' }, [el('span', { class: 'badge b-' + e.type, text: TYPE_LABEL[e.type] || e.type }), title]),
-        total > 0 ? el('span', { class: 'cost', text: fmtNum(total) + ' ' + (e.currency || '') }) : null
-      ]),
+      el('div', { class: 'entry-title' }, [el('span', { class: 'badge b-' + e.type, text: TYPE_LABEL[e.type] || e.type }), title]),
       el('div', { class: 'meta', text: meta }),
-      e.parts ? el('div', { class: 'detail', text: 'Parts: ' + e.parts }) : null,
-      who ? el('div', { class: 'meta', text: who }) : null,
       e.notes ? el('div', { class: 'detail', text: e.notes }) : null,
       el('div', { class: 'meta', style: 'margin-top:4px' }, [del])
     ]);

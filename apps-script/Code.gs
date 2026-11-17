@@ -3,19 +3,9 @@
  * Moto Repair Log: backend (Google Apps Script + Google Sheet)
  * (@OnlyCurrentDoc limits the script's access to this one spreadsheet.)
  *
- * Setup (about 5 minutes):
- *   1. Create a blank Google Sheet (name it e.g. "Moto Repair Log data").
- *   2. In the sheet: Extensions > Apps Script.
- *   3. Delete everything in Code.gs, paste this whole file, click Save.
- *   4. Pick "setup" in the function dropdown, click Run, approve the permissions.
- *   5. Deploy > New deployment > type "Web app".
- *        Execute as: Me
- *        Who has access: Anyone
- *      Click Deploy and copy the Web app URL (ends in /exec).
- *   6. Paste that URL into API_URL at the top of the script in index.html.
- *
- * After editing this file later: Deploy > Manage deployments > edit (pencil) >
- * Version: New version > Deploy. The URL stays the same.
+ * Lives in the "Moto Repair Log data" sheet: Extensions > Apps Script.
+ * After editing: Deploy > Manage deployments > edit (pencil) >
+ * Version: New version > Deploy. The web app URL stays the same.
  *
  * Every entry lands as one row in the "entries" tab. Emails stay in the sheet
  * and are never returned by the API. Riders only ever get back their own
@@ -26,24 +16,21 @@ const SHEET_NAME = 'entries';
 const HEADERS = [
   'entry_id', 'created_at', 'garage_id', 'source', 'brand', 'model', 'model_key',
   'year', 'country', 'email', 'type', 'date', 'odometer', 'unit', 'category',
-  'what_failed', 'parts', 'cost_parts', 'cost_labor', 'currency', 'paid_by',
-  'who_fixed', 'notes'
+  'part_failed', 'notes'
 ];
 const TEXT_COLS = ['entry_id', 'created_at', 'garage_id', 'model', 'model_key', 'date', 'year'];
 const PUBLIC_FIELDS = [
   'entry_id', 'created_at', 'brand', 'model', 'year', 'country', 'type', 'date',
-  'odometer', 'unit', 'category', 'what_failed', 'parts', 'cost_parts',
-  'cost_labor', 'currency', 'paid_by', 'who_fixed', 'notes'
+  'odometer', 'unit', 'category', 'part_failed', 'notes'
 ];
-const TYPES = ['repair', 'service', 'checkin'];
+const TYPES = ['repair', 'checkin'];
 const CATEGORIES = [
   'Engine', 'Electrical & lights', 'Battery & charging', 'Fuel system', 'Cooling',
   'Clutch & gearbox', 'Final drive', 'Brakes & ABS', 'Suspension & steering',
   'Wheels & bearings', 'Frame & bodywork', 'Electronics & dash', 'Other'
 ];
-const PAID_BY = ['Me', 'Warranty', 'Recall', 'Insurance'];
-const WHO_FIXED = ['Myself', 'Dealer', 'Independent shop'];
 const UNITS = ['km', 'mi'];
+const KM_PER_MI = 1.609344;
 const MAX_PER_HOUR = 60;
 
 /* ---------- setup ---------- */
@@ -57,11 +44,23 @@ function getSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) sh = ss.insertSheet(SHEET_NAME);
-  if (sh.getLastRow() === 0) {
-    sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
-    sh.setFrozenRows(1);
+  const last = sh.getLastRow();
+  if (last === 0) {
+    writeHeaders_(sh);
+  } else if (last === 1) {
+    // No data yet: refresh the header row if the columns changed.
+    const cur = sh.getRange(1, 1, 1, sh.getLastColumn()).getDisplayValues()[0];
+    if (cur.join('|') !== HEADERS.join('|')) {
+      sh.getRange(1, 1, 1, sh.getMaxColumns()).clearContent();
+      writeHeaders_(sh);
+    }
   }
   return sh;
+}
+
+function writeHeaders_(sh) {
+  sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
+  sh.setFrozenRows(1);
 }
 
 /* ---------- HTTP ---------- */
@@ -141,7 +140,6 @@ function statsFor_(brand, model) {
 function computeStats_(rows) {
   const owners = new Set(rows.map(function (r) { return r.garage_id; })).size;
   const repairs = rows.filter(function (r) { return r.type === 'repair'; });
-  const services = rows.filter(function (r) { return r.type === 'service'; }).length;
 
   const cats = {};
   repairs.forEach(function (r) { cats[r.category] = (cats[r.category] || 0) + 1; });
@@ -150,25 +148,18 @@ function computeStats_(rows) {
     .sort(function (a, b) { return b[1] - a[1]; })
     .slice(0, 3);
 
-  // Typical owner-paid repair cost, in whichever currency has the most entries.
-  const byCur = {};
-  repairs.forEach(function (r) {
-    if (r.paid_by !== 'Me' || !r.currency) return;
-    const t = (Number(r.cost_parts) || 0) + (Number(r.cost_labor) || 0);
-    if (t <= 0) return;
-    (byCur[r.currency] = byCur[r.currency] || []).push(t);
-  });
-  let typical = null;
-  Object.keys(byCur).forEach(function (c) {
-    const a = byCur[c];
-    if (typical && a.length <= typical.n) return;
-    a.sort(function (x, y) { return x - y; });
-    const mid = Math.floor(a.length / 2);
-    const median = a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
-    typical = { currency: c, median: Math.round(median), n: a.length };
-  });
+  // Median mileage at repair, in km.
+  const kms = repairs
+    .map(function (r) { const o = Number(r.odometer) || 0; return r.unit === 'mi' ? o * KM_PER_MI : o; })
+    .filter(function (x) { return x > 0; })
+    .sort(function (a, b) { return a - b; });
+  let medianKm = null;
+  if (kms.length) {
+    const mid = Math.floor(kms.length / 2);
+    medianKm = Math.round(kms.length % 2 ? kms[mid] : (kms[mid - 1] + kms[mid]) / 2);
+  }
 
-  return { owners: owners, repairs: repairs.length, services: services, topCategories: top, typicalCost: typical };
+  return { owners: owners, repairs: repairs.length, topCategories: top, medianKm: medianKm };
 }
 
 function modelsFor_(brand) {
@@ -210,14 +201,14 @@ function add_(b) {
   if (!brand || !model) return { ok: false, error: 'Brand and model are required' };
 
   const odometer = num_(b.odometer);
-  if (odometer === '') return { ok: false, error: 'Odometer reading is required' };
+  if (odometer === '') return { ok: false, error: 'Mileage is required' };
 
   const thisYear = new Date().getFullYear();
   const y = parseInt(b.year, 10);
   const year = y >= 1950 && y <= thisYear + 1 ? String(y) : '';
   const date = /^\d{4}-\d{2}$/.test(String(b.date || '')) ? String(b.date) : '';
   const email = String(b.email || '').trim().slice(0, 120);
-  const isCheckin = type === 'checkin';
+  const isRepair = type === 'repair';
 
   const entry = {
     entry_id: Utilities.getUuid().replace(/-/g, '').slice(0, 12),
@@ -234,17 +225,11 @@ function add_(b) {
     date: date,
     odometer: odometer,
     unit: UNITS.indexOf(b.unit) >= 0 ? b.unit : 'km',
-    category: type === 'repair' ? oneOf_(b.category, CATEGORIES, 'Other') : (type === 'service' ? 'Service' : 'No repairs'),
-    what_failed: isCheckin ? '' : clean_(b.what_failed, 300),
-    parts: isCheckin ? '' : clean_(b.parts, 300),
-    cost_parts: isCheckin ? '' : num_(b.cost_parts),
-    cost_labor: isCheckin ? '' : num_(b.cost_labor),
-    currency: isCheckin ? '' : clean_(b.currency, 8).toUpperCase(),
-    paid_by: type === 'repair' ? oneOf_(b.paid_by, PAID_BY, 'Me') : (type === 'service' ? 'Me' : ''),
-    who_fixed: isCheckin ? '' : oneOf_(b.who_fixed, WHO_FIXED, ''),
+    category: isRepair ? oneOf_(b.category, CATEGORIES, 'Other') : 'No repairs',
+    part_failed: isRepair ? clean_(b.part_failed, 300) : '',
     notes: clean_(b.notes, 500)
   };
-  if (!isCheckin && !entry.what_failed) return { ok: false, error: 'Describe what failed or what was done' };
+  if (isRepair && !entry.part_failed) return { ok: false, error: 'Say which part failed' };
 
   const sh = getSheet_();
   const r = sh.getLastRow() + 1;
