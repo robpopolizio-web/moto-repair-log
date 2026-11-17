@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moto Repair Log: what actually broke, and what it cost</title>
+<meta name="description" content="Log the repairs on your motorcycle and see what other owners of the same model have had to fix. No account needed.">
+<style>
+  :root {
+    --bg: #f5f3ee; --card: #fff; --ink: #1c1c1a; --muted: #6a675f; --line: #e2ded4;
+    --accent: #b8430f; --accent-soft: #fbeee6; --ok: #2e6b3c; --err: #a12a1f; --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 72px; }
+  header h1 { font-size: 1.65rem; line-height: 1.2; margin: 6px 0 6px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted); margin: 0 0 6px; }
+  .demo { background: #fff6d6; border: 1px solid #ecd98c; border-radius: 10px; padding: 10px 12px; font-size: .9rem; margin: 12px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin: 14px 0; }
+  .card h2 { font-size: 1.1rem; margin: 0 0 4px; }
+  .card .sub { color: var(--muted); font-size: .9rem; margin: 0 0 6px; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin: 12px 0 4px; }
+  .hint { font-weight: 400; color: var(--muted); }
+  input, select, textarea { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid #d6d1c5;
+    border-radius: 8px; background: #fff; color: inherit; }
+  textarea { min-height: 72px; resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .row-odo { display: grid; grid-template-columns: 1fr 90px; gap: 10px; }
+  .row > div > label, .row3 > div > label, .row-odo > div > label { margin-top: 12px; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--ink); background: var(--ink);
+    color: #fff; padding: 11px 16px; font-weight: 600; }
+  button:disabled { opacity: .55; cursor: default; }
+  button.secondary { background: transparent; color: var(--ink); }
+  button.link { background: none; border: 0; color: var(--accent); padding: 0; font-weight: 600; }
+  .actions { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+  .seg button { background: #fff; color: var(--ink); border: 1px solid #d6d1c5; font-weight: 500; padding: 10px 6px; font-size: .9rem; line-height: 1.25; }
+  .seg button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 16px 0 0; }
+  .tab { background: #fff; color: var(--ink); border: 1px solid var(--line); font-weight: 500; padding: 8px 12px; font-size: .9rem; }
+  .tab[aria-selected="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 6px; }
+  .stat { background: var(--bg); border-radius: 10px; padding: 10px 6px; text-align: center; }
+  .stat b { display: block; font-size: 1.35rem; line-height: 1.2; }
+  .stat span { font-size: .78rem; color: var(--muted); }
+  .note { font-size: .88rem; color: var(--muted); margin: 8px 0 0; }
+  .entry { border-top: 1px solid var(--line); padding: 12px 0; }
+  .entry:first-of-type { border-top: 0; }
+  .entry-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .entry-title { font-weight: 600; }
+  .badge { display: inline-block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    padding: 2px 7px; border-radius: 999px; margin-right: 6px; vertical-align: 1px; }
+  .b-repair { background: var(--accent-soft); color: var(--accent); }
+  .b-service { background: #e8eef7; color: #2c4f80; }
+  .b-checkin { background: #e6f2e8; color: var(--ok); }
+  .meta { color: var(--muted); font-size: .88rem; }
+  .detail { font-size: .92rem; margin-top: 2px; }
+  .cost { white-space: nowrap; font-weight: 600; }
+  .empty { color: var(--muted); font-size: .95rem; }
+  .error { color: var(--err); font-size: .92rem; }
+  .what-counts { font-size: .9rem; color: var(--muted); }
+  .what-counts summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+  .what-counts ul { margin: 8px 0 0; padding-left: 18px; }
+  footer { margin-top: 28px; font-size: .9rem; color: var(--muted); }
+  .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #fff; border: 1px solid var(--line);
+    padding: 3px 8px; border-radius: 6px; color: var(--ink); letter-spacing: .03em; }
+  .restore { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 8px; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: #fff;
+    padding: 10px 16px; border-radius: 999px; font-size: .92rem; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 90vw; }
+  .toast.show { opacity: 1; }
+  .hidden { display: none !important; }
+  @media (max-width: 560px) { .when-odo { grid-template-columns: 1fr; } }
+  @media (max-width: 420px) { .row3 { grid-template-columns: 1fr 1fr; } .row3 > div:last-child { grid-column: span 2; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="appName">Moto Repair Log</h1>
+    <p class="lede">Log what actually broke on your bike and what it cost you. See what other owners of the same model have had to fix. No account, takes a minute.</p>
+    <details class="what-counts">
+      <summary>What should I log?</summary>
+      <ul>
+        <li><b>Something broke:</b> anything that failed or wore out early and needed fixing, including warranty and recall work (mark who paid).</li>
+        <li><b>Scheduled service:</b> optional. Valve checks, big services, anything from the service schedule.</li>
+        <li><b>Nothing broke yet:</b> just as useful. Bikes with zero problems need to count too, or the numbers only reflect the unlucky owners.</li>
+      </ul>
+    </details>
+  </header>
+
+  <div id="demoBanner" class="demo hidden">Demo mode: entries are saved only in this browser. Paste your Apps Script URL into <code>API_URL</code> to go live.</div>
+
+  <!-- Add bike -->
+  <section id="setupCard" class="card hidden" aria-labelledby="setupTitle">
+    <h2 id="setupTitle">Add your bike</h2>
+    <p class="sub">Start with the bike. You can add more than one.</p>
+    <form id="bikeForm" novalidate>
+      <div class="row">
+        <div>
+          <label for="brand">Brand</label>
+          <select id="brand" required></select>
+        </div>
+        <div>
+          <label for="model">Model</label>
+          <input id="model" list="modelList" autocomplete="off" placeholder="e.g. MT-07" required maxlength="60">
+          <datalist id="modelList"></datalist>
+        </div>
+      </div>
+      <div id="brandOtherWrap" class="hidden">
+        <label for="brandOther">Brand name</label>
+        <input id="brandOther" maxlength="40">
+      </div>
+      <div class="row">
+        <div>
+          <label for="year">Model year</label>
+          <input id="year" type="number" inputmode="numeric" min="1950" placeholder="e.g. 2019">
+        </div>
+        <div>
+          <label for="country">Country <span class="hint">(optional)</span></label>
+          <input id="country" maxlength="40" placeholder="e.g. US">
+        </div>
+      </div>
+      <label for="email">Email <span class="hint">(optional, to get the results for your model)</span></label>
+      <input id="email" type="email" maxlength="120" placeholder="you@example.com" autocomplete="email">
+      <p id="bikeError" class="error hidden" role="alert"></p>
+      <div class="actions">
+        <button type="submit">Add bike</button>
+        <button type="button" id="cancelBike" class="secondary hidden">Cancel</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Garage -->
+  <section id="garage" class="hidden">
+    <div class="tabs" id="tabs" role="tablist" aria-label="Your bikes"></div>
+
+    <div class="card" id="statsCard" aria-live="polite">
+      <h2 id="statsTitle"></h2>
+      <p class="sub">All model years, from owners on this log</p>
+      <div id="statsBody"></div>
+    </div>
+
+    <div class="card">
+      <h2>Add an entry</h2>
+      <div class="seg" role="group" aria-label="Entry type">
+        <button type="button" data-type="repair" aria-pressed="true">Something broke</button>
+        <button type="button" data-type="service" aria-pressed="false">Scheduled service</button>
+        <button type="button" data-type="checkin" aria-pressed="false">Nothing broke yet</button>
+      </div>
+      <form id="entryForm" novalidate>
+        <div class="row when-odo">
+          <div>
+            <label for="date">When</label>
+            <input id="date" type="month" required>
+          </div>
+          <div>
+            <label for="odometer">Odometer</label>
+            <div class="row-odo" style="margin:0">
+              <input id="odometer" type="number" inputmode="numeric" min="0" placeholder="e.g. 18400" required>
+              <select id="unit" aria-label="Distance unit"><option>km</option><option>mi</option></select>
+            </div>
+          </div>
+        </div>
+
+        <div data-show="repair">
+          <label for="category">What part of the bike?</label>
+          <select id="category"></select>
+        </div>
+
+        <div data-show="repair service">
+          <label for="what" id="whatLabel">What failed?</label>
+          <input id="what" maxlength="300" placeholder="e.g. Regulator/rectifier died, battery stopped charging">
+          <label for="parts">Parts replaced <span class="hint">(optional)</span></label>
+          <input id="parts" maxlength="300" placeholder="e.g. Reg/rec, battery">
+          <div class="row3">
+            <div>
+              <label for="costParts">Parts cost</label>
+              <input id="costParts" type="number" inputmode="decimal" min="0" step="any" placeholder="0">
+            </div>
+            <div>
+              <label for="costLabor">Labor cost</label>
+              <input id="costLabor" type="number" inputmode="decimal" min="0" step="any" placeholder="0">
+            </div>
+            <div>
+              <label for="currency">Currency</label>
+              <select id="currency">
+                <option>USD</option><option>EUR</option><option>GBP</option><option>CAD</option>
+                <option>AUD</option><option>NZD</option><option>CHF</option><option>SEK</option>
+                <option>NOK</option><option>DKK</option><option>PLN</option><option>INR</option>
+                <option>BRL</option><option>ZAR</option><option>JPY</option><option>Other</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="row" data-show="repair service">
+          <div data-show="repair">
+            <label for="paidBy">Who paid?</label>
+            <select id="paidBy">
+              <option value="Me">Me</option>
+              <option value="Warranty">Warranty</option>
+              <option value="Recall">Recall</option>
+              <option value="Insurance">Insurance</option>
+            </select>
+          </div>
+          <div>
+            <label for="whoFixed">Who did the work?</label>
+            <select id="whoFixed">
+              <option value="">Choose</option>
+              <option>Myself</option>
+              <option>Dealer</option>
+              <option>Independent shop</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="notes" id="notesLabel">Notes <span class="hint">(optional)</span></label>
+        <textarea id="notes" maxlength="500" placeholder="Symptoms, how it was diagnosed, anything another owner should know"></textarea>
+
+        <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" tabindex="-1" autocomplete="off"></div>
+        <p id="entryError" class="error hidden" role="alert"></p>
+        <div class="actions"><button type="submit" id="saveBtn">Save repair</button></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2 id="logTitle">Your log</h2>
+      <div id="logBody"></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Your entries are tied to a private garage code saved in this browser. Keep it to see your log on another device: <span class="code" id="garageCode"></span> <button class="link" id="copyCode" type="button">Copy</button></p>
+    <form id="restoreForm" class="restore" novalidate>
+      <input id="restoreInput" placeholder="Have a garage code? Paste it here" autocomplete="off" aria-label="Garage code">
+      <button type="submit" class="secondary">Load</button>
+    </form>
+    <p id="restoreError" class="error hidden" role="alert"></p>
+    <p>Only totals per model are shown publicly. Your email, if you give one, is never displayed.</p>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ======== CONFIG: edit these ======== */
+  var CONFIG = {
+    API_URL: 'https://script.google.com/macros/s/AKfycbxY7IrSAkGdcPoNhGjTAbz3x5QSuM5GAw6Z9hfBC0dooyTDQohpkaa3mvKn8R-JxLy3cw/exec',               // paste the Apps Script web app URL (ends in /exec)
+    APP_NAME: 'Moto Repair Log'
+  };
+  /* ==================================== */
+
+  var BRANDS = ['Aprilia', 'BMW', 'CFMoto', 'Ducati', 'Harley-Davidson', 'Honda', 'Husqvarna', 'Indian',
+    'Kawasaki', 'KTM', 'Moto Guzzi', 'MV Agusta', 'Royal Enfield', 'Suzuki', 'Triumph', 'Yamaha', 'Zero', 'Other'];
+  var CATEGORIES = ['Engine', 'Electrical & lights', 'Battery & charging', 'Fuel system', 'Cooling',
+    'Clutch & gearbox', 'Final drive', 'Brakes & ABS', 'Suspension & steering', 'Wheels & bearings',
+    'Frame & bodywork', 'Electronics & dash', 'Other'];
+  var TYPE_LABEL = { repair: 'Repair', service: 'Service', checkin: 'No repairs' };
+  var SAVE_LABEL = { repair: 'Save repair', service: 'Save service', checkin: 'Save check-in' };
+
+  /* ---------- helpers ---------- */
+  var $ = function (id) { return document.getElementById(id); };
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  function key(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+  function bikeKey(b) { return key(b.brand) + '|' + key(b.model) + '|' + (b.year || ''); }
+  function bikeName(b) { return b.brand + ' ' + b.model + (b.year ? ' (' + b.year + ')' : ''); }
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === 'text') n.textContent = attrs[k];
+      else if (k === 'class') n.className = attrs[k];
+      else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), attrs[k]);
+      else n.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function (c) { if (c != null) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return n;
+  }
+  function show(node, on) { node.classList.toggle('hidden', !on); }
+  function fmtNum(n) { var x = Number(n); return isFinite(x) ? x.toLocaleString() : String(n); }
+  function newGarageId() {
+    var a = new Uint8Array(16), out = '';
+    (window.crypto || window.msCrypto).getRandomValues(a);
+    for (var i = 0; i < a.length; i++) out += (a[i] % 36).toString(36);
+    return out;
+  }
+  function withTimeout(p, ms) {
+    return Promise.race([p, new Promise(function (_, rej) { setTimeout(function () { rej(new Error('timeout')); }, ms); })]);
+  }
+  var toastTimer;
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+  function monthLabel(ym) {
+    if (!/^\d{4}-\d{2}$/.test(ym || '')) return '';
+    var d = new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1);
+    return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+  }
+
+  /* ---------- shared stats logic (mirrors Code.gs, used in demo mode) ---------- */
+  function computeStats(rows) {
+    var owners = {}; rows.forEach(function (r) { owners[r.garage_id] = 1; });
+    var repairs = rows.filter(function (r) { return r.type === 'repair'; });
+    var services = rows.filter(function (r) { return r.type === 'service'; }).length;
+    var cats = {}; repairs.forEach(function (r) { cats[r.category] = (cats[r.category] || 0) + 1; });
+    var top = Object.keys(cats).map(function (k) { return [k, cats[k]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 3);
+    var byCur = {};
+    repairs.forEach(function (r) {
+      if (r.paid_by !== 'Me' || !r.currency) return;
+      var t = (Number(r.cost_parts) || 0) + (Number(r.cost_labor) || 0);
+      if (t > 0) (byCur[r.currency] = byCur[r.currency] || []).push(t);
+    });
+    var typical = null;
+    Object.keys(byCur).forEach(function (c) {
+      var a = byCur[c]; if (typical && a.length <= typical.n) return;
+      a.sort(function (x, y) { return x - y; });
+      var mid = Math.floor(a.length / 2), med = a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
+      typical = { currency: c, median: Math.round(med), n: a.length };
+    });
+    return { owners: Object.keys(owners).length, repairs: repairs.length, services: services, topCategories: top, typicalCost: typical };
+  }
+
+  /* ---------- demo backend (localStorage) ---------- */
+  var PUBLIC = ['entry_id', 'created_at', 'brand', 'model', 'year', 'country', 'type', 'date', 'odometer', 'unit', 'category',
+    'what_failed', 'parts', 'cost_parts', 'cost_labor', 'currency', 'paid_by', 'who_fixed', 'notes'];
+  function pub(r) { var o = {}; PUBLIC.forEach(function (f) { o[f] = r[f]; }); return o; }
+  var demo = {
+    rows: function () { return store.get('mrl_demo_rows', []); },
+    get: function (p) {
+      var rows = this.rows();
+      if (p.action === 'log') return { ok: true, entries: rows.filter(function (r) { return r.garage_id === p.garage; }).map(pub) };
+      if (p.action === 'stats') return { ok: true, stats: computeStats(rows.filter(function (r) { return key(r.brand) === key(p.brand) && r.model_key === key(p.model); })) };
+      if (p.action === 'models') {
+        var seen = {}, out = [];
+        rows.forEach(function (r) { if (key(r.brand) === key(p.brand) && !seen[r.model_key]) { seen[r.model_key] = 1; out.push(r.model); } });
+        return { ok: true, models: out };
+      }
+      return { ok: false, error: 'Unknown action' };
+    },
+    post: function (b) {
+      var rows = this.rows();
+      if (b.action === 'add') {
+        var e = {};
+        Object.keys(b).forEach(function (k) { e[k] = b[k]; });
+        e.entry_id = newGarageId().slice(0, 12).replace(/[^a-f0-9]/g, 'a');
+        e.created_at = new Date().toISOString();
+        e.garage_id = b.garage; e.model_key = key(b.model);
+        if (b.type === 'service') { e.category = 'Service'; e.paid_by = 'Me'; }
+        if (b.type === 'checkin') { e.category = 'No repairs'; e.what_failed = e.parts = e.cost_parts = e.cost_labor = e.currency = e.paid_by = e.who_fixed = ''; }
+        rows.push(e); store.set('mrl_demo_rows', rows);
+        return { ok: true, entry: pub(e) };
+      }
+      if (b.action === 'delete') {
+        store.set('mrl_demo_rows', rows.filter(function (r) { return !(r.entry_id === b.entry_id && r.garage_id === b.garage); }));
+        return { ok: true };
+      }
+      return { ok: false, error: 'Unknown action' };
+    }
+  };
+
+  /* ---------- API ---------- */
+  function apiGet(params) {
+    if (!CONFIG.API_URL) return withTimeout(Promise.resolve(demo.get(params)), 10000);
+    var u = new URL(CONFIG.API_URL);
+    Object.keys(params).forEach(function (k) { u.searchParams.set(k, params[k]); });
+    return withTimeout(fetch(u.toString()).then(function (r) { return r.json(); }), 10000);
+  }
+  function apiPost(body) {
+    if (!CONFIG.API_URL) return withTimeout(Promise.resolve(demo.post(body)), 10000);
+    // text/plain body keeps this a "simple" request, which Apps Script accepts cross-origin.
+    return withTimeout(fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) }).then(function (r) { return r.json(); }), 15000);
+  }
+
+  /* ---------- state ---------- */
+  var qs = new URLSearchParams(location.search);
+  if (qs.get('src') && !store.get('mrl_src', '')) store.set('mrl_src', qs.get('src').slice(0, 60));
+  var garage = store.get('mrl_garage', '');
+  if (!/^[a-z0-9]{12,32}$/.test(garage)) { garage = newGarageId(); store.set('mrl_garage', garage); }
+  var bikes = store.get('mrl_bikes', []);
+  var activeKey = store.get('mrl_active', bikes[0] ? bikeKey(bikes[0]) : '');
+  var prefs = store.get('mrl_prefs', { unit: 'km', currency: 'USD' });
+  var entries = [];
+  var entryType = 'repair';
+  var logState = 'loading';
+
+  function activeBike() {
+    for (var i = 0; i < bikes.length; i++) if (bikeKey(bikes[i]) === activeKey) return bikes[i];
+    return bikes[0] || null;
+  }
+  function saveBikes() { store.set('mrl_bikes', bikes); store.set('mrl_active', activeKey); }
+  function addBike(b) {
+    if (!bikes.some(function (x) { return bikeKey(x) === bikeKey(b); })) bikes.push(b);
+    activeKey = bikeKey(b); saveBikes();
+  }
+
+  /* ---------- init UI ---------- */
+  document.title = CONFIG.APP_NAME + ': what actually broke, and what it cost';
+  $('appName').textContent = CONFIG.APP_NAME;
+  show($('demoBanner'), !CONFIG.API_URL);
+  BRANDS.forEach(function (b) { $('brand').appendChild(el('option', { value: b, text: b })); });
+  $('brand').insertBefore(el('option', { value: '', text: 'Choose brand' }), $('brand').firstChild);
+  $('brand').value = '';
+  CATEGORIES.forEach(function (c) { $('category').appendChild(el('option', { value: c, text: c })); });
+  $('year').max = new Date().getFullYear() + 1;
+  $('email').value = store.get('mrl_email', '');
+  $('unit').value = prefs.unit; $('currency').value = prefs.currency;
+  $('garageCode').textContent = garage;
+
+  function resetEntryDefaults() {
+    var d = new Date();
+    $('date').value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    ['odometer', 'what', 'parts', 'costParts', 'costLabor', 'notes', 'website'].forEach(function (id) { $(id).value = ''; });
+    $('paidBy').value = 'Me'; $('whoFixed').value = ''; $('category').value = CATEGORIES[0];
+  }
+  resetEntryDefaults();
+
+  /* ---------- bike form ---------- */
+  $('brand').addEventListener('change', function () {
+    var v = $('brand').value;
+    show($('brandOtherWrap'), v === 'Other');
+    var dl = $('modelList'); dl.textContent = '';
+    if (!v || v === 'Other') return;
+    apiGet({ action: 'models', brand: v }).then(function (res) {
+      if (!res || !res.ok || $('brand').value !== v) return;
+      res.models.forEach(function (m) { dl.appendChild(el('option', { value: m })); });
+    }).catch(function () {});
+  });
+
+  $('bikeForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var brand = $('brand').value === 'Other' ? $('brandOther').value.trim() : $('brand').value;
+    var model = $('model').value.trim();
+    var year = $('year').value.trim();
+    var err = '';
+    if (!brand) err = 'Pick a brand.';
+    else if (!model) err = 'Enter the model.';
+    else if (year && (+year < 1950 || +year > new Date().getFullYear() + 1)) err = 'That model year looks off.';
+    $('bikeError').textContent = err; show($('bikeError'), !!err);
+    if (err) return;
+    store.set('mrl_email', $('email').value.trim());
+    addBike({ brand: brand, model: model, year: year, country: $('country').value.trim() });
+    $('bikeForm').reset(); show($('brandOtherWrap'), false);
+    $('email').value = store.get('mrl_email', '');
+    render(); loadStats();
+  });
+  $('cancelBike').addEventListener('click', function () { render(); });
+
+  /* ---------- entry type ---------- */
+  function setType(t) {
+    entryType = t;
+    document.querySelectorAll('.seg button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.type === t)); });
+    document.querySelectorAll('#entryForm [data-show]').forEach(function (n) {
+      show(n, n.getAttribute('data-show').split(' ').indexOf(t) >= 0);
+    });
+    $('whatLabel').textContent = t === 'service' ? 'What was done?' : 'What failed?';
+    $('what').placeholder = t === 'service' ? 'e.g. 24,000 km valve check and service' : 'e.g. Regulator/rectifier died, battery stopped charging';
+    $('notes').placeholder = t === 'checkin' ? 'Anything worth knowing about the bike so far' : 'Symptoms, how it was diagnosed, anything another owner should know';
+    $('saveBtn').textContent = SAVE_LABEL[t];
+    show($('entryError'), false);
+  }
+  document.querySelectorAll('.seg button').forEach(function (b) {
+    b.addEventListener('click', function () { setType(b.dataset.type); });
+  });
+  setType('repair');
+
+  /* ---------- entry form ---------- */
+  $('entryForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var bike = activeBike(); if (!bike) return;
+    var odo = $('odometer').value.trim();
+    var what = $('what').value.trim();
+    var err = '';
+    if (!$('date').value) err = 'Add the month it happened.';
+    else if (odo === '' || +odo < 0) err = 'Add the odometer reading.';
+    else if (entryType !== 'checkin' && !what) err = entryType === 'service' ? 'Describe what was done.' : 'Describe what failed.';
+    $('entryError').textContent = err; show($('entryError'), !!err);
+    if (err) return;
+
+    prefs = { unit: $('unit').value, currency: $('currency').value }; store.set('mrl_prefs', prefs);
+    var body = {
+      action: 'add', garage: garage, source: store.get('mrl_src', ''), email: store.get('mrl_email', ''),
+      brand: bike.brand, model: bike.model, year: bike.year, country: bike.country,
+      type: entryType, date: $('date').value, odometer: odo, unit: $('unit').value,
+      category: $('category').value, what_failed: what, parts: $('parts').value.trim(),
+      cost_parts: $('costParts').value.trim(), cost_labor: $('costLabor').value.trim(), currency: $('currency').value,
+      paid_by: $('paidBy').value, who_fixed: $('whoFixed').value, notes: $('notes').value.trim(), website: $('website').value
+    };
+    var btn = $('saveBtn'); btn.disabled = true; btn.textContent = 'Saving…';
+    apiPost(body).then(function (res) {
+      if (!res || !res.ok) throw new Error(res && res.error || 'Could not save');
+      toast('Saved. Thanks, this helps other ' + bike.model + ' owners.');
+      resetEntryDefaults(); setType('repair');
+      refresh();
+    }).catch(function (e) {
+      $('entryError').textContent = e.message === 'timeout' ? 'The log did not answer. Check your connection and try again.' : e.message;
+      show($('entryError'), true);
+    }).then(function () { btn.disabled = false; btn.textContent = SAVE_LABEL[entryType]; });
+  });
+
+  /* ---------- loading ---------- */
+  function loadLog() {
+    logState = 'loading'; renderLog();
+    return apiGet({ action: 'log', garage: garage }).then(function (res) {
+      if (!res || !res.ok) throw new Error(res && res.error || 'error');
+      entries = res.entries || [];
+      entries.forEach(function (e) { // restore bikes known only to the server
+        var b = { brand: e.brand, model: e.model, year: e.year, country: e.country };
+        if (!bikes.some(function (x) { return bikeKey(x) === bikeKey(b); })) bikes.push(b);
+      });
+      if (!activeBike() && bikes[0]) activeKey = bikeKey(bikes[0]);
+      saveBikes(); logState = 'ready';
+    }).catch(function () { logState = 'error'; }).then(render);
+  }
+
+  function loadStats() {
+    var bike = activeBike(); if (!bike) return;
+    var body = $('statsBody'); body.textContent = '';
+    body.appendChild(el('p', { class: 'note', text: 'Loading…' }));
+    var k = bikeKey(bike);
+    apiGet({ action: 'stats', brand: bike.brand, model: bike.model }).then(function (res) {
+      if (!activeBike() || bikeKey(activeBike()) !== k) return;
+      if (!res || !res.ok) throw new Error('error');
+      renderStats(bike, res.stats);
+    }).catch(function () {
+      body.textContent = '';
+      body.appendChild(el('p', { class: 'error', text: 'Could not load model totals right now.' }));
+    });
+  }
+
+  function refresh() { loadLog().then(loadStats); }
+
+  /* ---------- rendering ---------- */
+  function render() {
+    var hasBikes = bikes.length > 0;
+    show($('setupCard'), !hasBikes || $('setupCard').dataset.open === '1');
+    $('setupCard').dataset.open = '';
+    show($('cancelBike'), hasBikes);
+    show($('garage'), hasBikes);
+    if (!hasBikes) return;
+    renderTabs(); renderLog();
+    var b = activeBike();
+    $('statsTitle').textContent = b.brand + ' ' + b.model + ' owners';
+  }
+
+  function renderTabs() {
+    var tabs = $('tabs'); tabs.textContent = '';
+    bikes.forEach(function (b) {
+      var k = bikeKey(b);
+      tabs.appendChild(el('button', {
+        type: 'button', class: 'tab', role: 'tab', 'aria-selected': String(k === activeKey), text: bikeName(b),
+        onclick: function () { activeKey = k; saveBikes(); render(); loadStats(); }
+      }));
+    });
+    tabs.appendChild(el('button', {
+      type: 'button', class: 'tab', text: '+ Add bike',
+      onclick: function () { $('setupCard').dataset.open = '1'; render(); $('setupCard').scrollIntoView({ behavior: 'smooth' }); }
+    }));
+  }
+
+  function renderStats(bike, s) {
+    var body = $('statsBody'); body.textContent = '';
+    var cost = s.typicalCost ? fmtNum(s.typicalCost.median) + ' ' + s.typicalCost.currency : '–';
+    body.appendChild(el('div', { class: 'stats' }, [
+      el('div', { class: 'stat' }, [el('b', { text: fmtNum(s.owners) }), el('span', { text: s.owners === 1 ? 'owner' : 'owners' })]),
+      el('div', { class: 'stat' }, [el('b', { text: fmtNum(s.repairs) }), el('span', { text: s.repairs === 1 ? 'repair logged' : 'repairs logged' })]),
+      el('div', { class: 'stat' }, [el('b', { text: cost }), el('span', { text: 'typical owner-paid repair' })])
+    ]));
+    if (s.topCategories && s.topCategories.length) {
+      body.appendChild(el('p', { class: 'note', text: 'Most common: ' + s.topCategories.map(function (c) { return c[0] + ' (' + c[1] + ')'; }).join(', ') }));
+    }
+    if (s.owners < 5) {
+      body.appendChild(el('p', { class: 'note', text: 'Too few owners for real conclusions yet. Know another ' + bike.model + ' owner? Send them this page.' }));
+    }
+  }
+
+  function renderLog() {
+    var bike = activeBike(); var body = $('logBody'); body.textContent = '';
+    if (!bike) return;
+    $('logTitle').textContent = 'Your log: ' + bikeName(bike);
+    if (logState === 'loading') { body.appendChild(el('p', { class: 'empty', text: 'Loading…' })); return; }
+    if (logState === 'error') {
+      body.appendChild(el('p', { class: 'error' }, ['Could not load your log. ', el('button', { type: 'button', class: 'link', text: 'Try again', onclick: refresh })]));
+      return;
+    }
+    var k = bikeKey(bike);
+    var mine = entries.filter(function (e) { return bikeKey(e) === k; })
+      .sort(function (a, b) { return (b.date || '').localeCompare(a.date || '') || (b.created_at || '').localeCompare(a.created_at || ''); });
+    if (!mine.length) {
+      body.appendChild(el('p', { class: 'empty', text: 'Nothing logged for this bike yet. If nothing has ever broken, choose “Nothing broke yet” so the bike still counts.' }));
+      return;
+    }
+    mine.forEach(function (e) { body.appendChild(entryNode(e)); });
+  }
+
+  function entryNode(e) {
+    var total = (Number(e.cost_parts) || 0) + (Number(e.cost_labor) || 0);
+    var title = e.type === 'checkin' ? 'No repairs so far' : (e.type === 'repair' ? e.category + ': ' : '') + (e.what_failed || '');
+    var meta = [monthLabel(e.date), e.odometer !== '' ? fmtNum(e.odometer) + ' ' + e.unit : ''].filter(Boolean).join(' · ');
+    var who = [e.type === 'repair' && e.paid_by ? 'Paid by: ' + e.paid_by : '', e.who_fixed ? 'Work: ' + e.who_fixed : ''].filter(Boolean).join(' · ');
+    var del = el('button', { type: 'button', class: 'link', text: 'Delete' });
+    var armed = false, timer;
+    del.addEventListener('click', function () {
+      if (!armed) { armed = true; del.textContent = 'Tap again to delete'; timer = setTimeout(function () { armed = false; del.textContent = 'Delete'; }, 3000); return; }
+      clearTimeout(timer); del.disabled = true; del.textContent = 'Deleting…';
+      apiPost({ action: 'delete', garage: garage, entry_id: e.entry_id }).then(function (res) {
+        if (!res || !res.ok) throw new Error();
+        toast('Entry deleted'); refresh();
+      }).catch(function () { del.disabled = false; armed = false; del.textContent = 'Delete'; toast('Could not delete. Try again.'); });
+    });
+    return el('div', { class: 'entry' }, [
+      el('div', { class: 'entry-top' }, [
+        el('div', { class: 'entry-title' }, [el('span', { class: 'badge b-' + e.type, text: TYPE_LABEL[e.type] || e.type }), title]),
+        total > 0 ? el('span', { class: 'cost', text: fmtNum(total) + ' ' + (e.currency || '') }) : null
+      ]),
+      el('div', { class: 'meta', text: meta }),
+      e.parts ? el('div', { class: 'detail', text: 'Parts: ' + e.parts }) : null,
+      who ? el('div', { class: 'meta', text: who }) : null,
+      e.notes ? el('div', { class: 'detail', text: e.notes }) : null,
+      el('div', { class: 'meta', style: 'margin-top:4px' }, [del])
+    ]);
+  }
+
+  /* ---------- garage code ---------- */
+  $('copyCode').addEventListener('click', function () {
+    var done = function () { toast('Garage code copied'); };
+    if (navigator.clipboard) navigator.clipboard.writeText(garage).then(done, function () { toast(garage); });
+    else toast(garage);
+  });
+  $('restoreForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var code = $('restoreInput').value.trim().toLowerCase();
+    var ok = /^[a-z0-9]{12,32}$/.test(code);
+    $('restoreError').textContent = ok ? '' : 'That does not look like a garage code.';
+    show($('restoreError'), !ok);
+    if (!ok) return;
+    garage = code; store.set('mrl_garage', garage); $('garageCode').textContent = garage;
+    $('restoreInput').value = '';
+    loadLog().then(function () {
+      if (!bikes.length) { toast('No entries found for that code'); return; }
+      toast('Garage loaded'); loadStats();
+    });
+  });
+
+  /* ---------- go ---------- */
+  render();
+  if (bikes.length) refresh(); else loadLog();
+})();
+</script>
+</body>
+</html>
