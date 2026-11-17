@@ -144,8 +144,6 @@
         <div data-show="repair">
           <label for="fixed">What part failed?</label>
           <input id="fixed" maxlength="300" placeholder="e.g. Regulator/rectifier">
-          <label for="category">Part of the bike</label>
-          <select id="category"></select>
         </div>
 
         <div class="row when-odo">
@@ -254,8 +252,9 @@
   function computeStats(rows) {
     var owners = {}; rows.forEach(function (r) { owners[r.garage_id] = 1; });
     var repairs = rows.filter(function (r) { return r.type === 'repair'; });
-    var cats = {}; repairs.forEach(function (r) { cats[r.category] = (cats[r.category] || 0) + 1; });
-    var top = Object.keys(cats).map(function (k) { return [k, cats[k]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 3);
+    var cnt = {}, names = {};
+    repairs.forEach(function (r) { var k = key(r.part_failed); if (!k) return; cnt[k] = (cnt[k] || 0) + 1; names[k] = names[k] || r.part_failed; });
+    var top = Object.keys(cnt).map(function (k) { return [names[k], cnt[k]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 3);
     var kms = repairs.map(function (r) { var o = Number(r.odometer) || 0; return r.unit === 'mi' ? o * KM_PER_MI : o; })
       .filter(function (x) { return x > 0; }).sort(function (a, b) { return a - b; });
     var med = null;
@@ -340,7 +339,6 @@
   show($('demoBanner'), !CONFIG.API_URL);
   $('brand').appendChild(el('option', { value: '', text: 'Choose brand' }));
   BRANDS.forEach(function (b) { $('brand').appendChild(el('option', { value: b, text: b })); });
-  CATEGORIES.forEach(function (c) { $('category').appendChild(el('option', { value: c, text: c })); });
   $('year').max = new Date().getFullYear() + 1;
   $('email').value = store.get('mrl_email', '');
   $('unit').value = unitPref;
@@ -350,7 +348,6 @@
     var d = new Date();
     $('date').value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
     ['odometer', 'fixed', 'notes', 'website'].forEach(function (id) { $(id).value = ''; });
-    $('category').value = CATEGORIES[0];
   }
   resetEntryDefaults();
 
@@ -418,7 +415,7 @@
       action: 'add', garage: garage, source: store.get('mrl_src', ''), email: store.get('mrl_email', ''),
       brand: bike.brand, model: bike.model, year: bike.year, country: bike.country,
       type: entryType, date: $('date').value, odometer: odo, unit: unitPref,
-      category: $('category').value, part_failed: fixed, notes: $('notes').value.trim(), website: $('website').value
+      part_failed: fixed, notes: $('notes').value.trim(), website: $('website').value
     };
     var btn = $('saveBtn'); btn.disabled = true; btn.textContent = 'Saving…';
     apiPost(body).then(function (res) {
@@ -505,7 +502,7 @@
       el('div', { class: 'stat' }, [el('b', { text: mileage }), el('span', { text: 'typical mileage at failure' })])
     ]));
     if (s.topCategories && s.topCategories.length) {
-      body.appendChild(el('p', { class: 'note', text: 'Most common: ' + s.topCategories.map(function (c) { return c[0] + ' (' + c[1] + ')'; }).join(', ') }));
+      body.appendChild(el('p', { class: 'note', text: 'Most common failures: ' + s.topCategories.map(function (c) { return c[0] + ' (' + c[1] + ')'; }).join(', ') }));
     }
     if (s.owners < 5) {
       body.appendChild(el('p', { class: 'note', text: 'Too few owners for real conclusions yet. Know another ' + bike.model + ' owner? Send them this page.' }));
@@ -532,7 +529,7 @@
   }
 
   function entryNode(e) {
-    var title = e.type === 'checkin' ? 'No repairs so far' : e.category + ': ' + (e.part_failed || '');
+    var title = e.type === 'checkin' ? 'No repairs so far' : (e.part_failed || '');
     var meta = [e.odometer !== '' ? fmtNum(e.odometer) + ' ' + e.unit : '', monthLabel(e.date)].filter(Boolean).join(' · ');
     var del = el('button', { type: 'button', class: 'link', text: 'Delete' });
     var armed = false, timer;

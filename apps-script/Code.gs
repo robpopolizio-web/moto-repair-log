@@ -141,10 +141,16 @@ function computeStats_(rows) {
   const owners = new Set(rows.map(function (r) { return r.garage_id; })).size;
   const repairs = rows.filter(function (r) { return r.type === 'repair'; });
 
-  const cats = {};
-  repairs.forEach(function (r) { cats[r.category] = (cats[r.category] || 0) + 1; });
-  const top = Object.keys(cats)
-    .map(function (k) { return [k, cats[k]]; })
+  // Most common failed parts, grouped loosely by their text.
+  const counts = {}, names = {};
+  repairs.forEach(function (r) {
+    const k = key_(r.part_failed);
+    if (!k) return;
+    counts[k] = (counts[k] || 0) + 1;
+    names[k] = names[k] || r.part_failed;
+  });
+  const top = Object.keys(counts)
+    .map(function (k) { return [names[k], counts[k]]; })
     .sort(function (a, b) { return b[1] - a[1]; })
     .slice(0, 3);
 
@@ -225,7 +231,7 @@ function add_(b) {
     date: date,
     odometer: odometer,
     unit: UNITS.indexOf(b.unit) >= 0 ? b.unit : 'km',
-    category: isRepair ? oneOf_(b.category, CATEGORIES, 'Other') : 'No repairs',
+    category: isRepair ? oneOf_(b.category, CATEGORIES, '') : 'No repairs',
     part_failed: isRepair ? clean_(b.part_failed, 300) : '',
     notes: clean_(b.notes, 500)
   };
