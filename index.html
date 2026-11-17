@@ -113,10 +113,6 @@
           <label for="year">Model year</label>
           <input id="year" type="number" inputmode="numeric" min="1950" placeholder="e.g. 2019">
         </div>
-        <div>
-          <label for="country">Country <span class="hint">(optional)</span></label>
-          <input id="country" maxlength="40" placeholder="e.g. US">
-        </div>
       </div>
       <label for="email">Email <span class="hint">(optional, to get the results for your model)</span></label>
       <input id="email" type="email" maxlength="120" placeholder="you@example.com" autocomplete="email">
@@ -382,7 +378,7 @@
     $('bikeError').textContent = err; show($('bikeError'), !!err);
     if (err) return;
     store.set('mrl_email', $('email').value.trim());
-    addBike({ brand: brand, model: model, year: year, country: $('country').value.trim() });
+    addBike({ brand: brand, model: model, year: year, country: '' });
     $('bikeForm').reset(); show($('brandOtherWrap'), false);
     $('email').value = store.get('mrl_email', '');
     render(); loadStats();
