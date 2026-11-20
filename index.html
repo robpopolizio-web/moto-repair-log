@@ -64,6 +64,14 @@
   .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #fff; border: 1px solid var(--line);
     padding: 3px 8px; border-radius: 6px; color: var(--ink); letter-spacing: .03em; }
   .restore { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 8px; }
+  .photo-pick { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border: 1px dashed #c9c3b5; border-radius: 8px;
+    padding: 10px 14px; font-weight: 600; font-size: .92rem; background: #fff; margin: 0; }
+  .photo-pick input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .thumbs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .thumb { position: relative; }
+  .thumb img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
+  .thumb button { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; padding: 0; border-radius: 50%;
+    font-size: 15px; line-height: 1; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
   .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: #fff;
     padding: 10px 16px; border-radius: 999px; font-size: .92rem; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 90vw; }
@@ -158,6 +166,15 @@
             <label for="date">When <span class="hint">(roughly)</span></label>
             <input id="date" type="month">
           </div>
+        </div>
+
+        <div data-show="repair">
+          <label>Photos <span class="hint">(optional, up to 3, e.g. the failed part)</span></label>
+          <label class="photo-pick" id="photoPick">+ Add photos
+            <input id="photoInput" type="file" accept="image/*" multiple>
+          </label>
+          <div class="thumbs" id="thumbs"></div>
+          <p id="photoNote" class="note hidden"></p>
         </div>
 
         <label for="notes">Notes <span class="hint">(optional)</span></label>
@@ -264,7 +281,7 @@
 
   /* ---------- demo backend (localStorage) ---------- */
   var PUBLIC = ['entry_id', 'created_at', 'brand', 'model', 'year', 'country', 'type', 'date', 'odometer', 'unit', 'category', 'part_failed', 'notes'];
-  function pub(r) { var o = {}; PUBLIC.forEach(function (f) { o[f] = r[f]; }); return o; }
+  function pub(r) { var o = {}; PUBLIC.forEach(function (f) { o[f] = r[f]; }); o.photo_count = r.photo_count || 0; return o; }
   var demo = {
     rows: function () { return store.get('mrl_demo_rows', []); },
     get: function (p) {
@@ -286,6 +303,7 @@
         e.entry_id = newGarageId().slice(0, 12).replace(/[^a-f0-9]/g, 'a');
         e.created_at = new Date().toISOString();
         e.garage_id = b.garage; e.model_key = key(b.model);
+        e.photo_count = (b.type === 'repair' && b.photos) ? Math.min(b.photos.length, 3) : 0; delete e.photos;
         if (b.type === 'checkin') { e.category = 'No repairs'; e.part_failed = ''; }
         rows.push(e); store.set('mrl_demo_rows', rows);
         return { ok: true, entry: pub(e) };
@@ -308,7 +326,7 @@
   function apiPost(body) {
     if (!CONFIG.API_URL) return withTimeout(Promise.resolve(demo.post(body)), 10000);
     // text/plain body keeps this a "simple" request, which Apps Script accepts cross-origin.
-    return withTimeout(fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) }).then(function (r) { return r.json(); }), 15000);
+    return withTimeout(fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) }).then(function (r) { return r.json(); }), 60000);
   }
 
   /* ---------- state ---------- */
@@ -344,10 +362,68 @@
   $('unit').value = unitPref;
   $('garageCode').textContent = garage;
 
+  /* ---------- photos ---------- */
+  var MAX_PHOTOS = 3, MAX_EDGE = 1600;
+  var pendingPhotos = [];
+  function loadImage(file) {
+    if (window.createImageBitmap) {
+      return createImageBitmap(file, { imageOrientation: 'from-image' }).catch(function () { return viaImg(file); });
+    }
+    return viaImg(file);
+  }
+  function viaImg(file) {
+    return new Promise(function (res, rej) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () { URL.revokeObjectURL(url); res(img); };
+      img.onerror = function () { URL.revokeObjectURL(url); rej(new Error('unreadable')); };
+      img.src = url;
+    });
+  }
+  // Shrink to MAX_EDGE px and re-encode as JPEG. Re-encoding also drops EXIF data such as GPS location.
+  function shrink(file) {
+    return loadImage(file).then(function (img) {
+      var w = img.width, h = img.height, s = Math.min(1, MAX_EDGE / Math.max(w, h));
+      var c = document.createElement('canvas');
+      c.width = Math.round(w * s); c.height = Math.round(h * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      var q = 0.82, d = c.toDataURL('image/jpeg', q);
+      while (d.length > 1.3 * 1024 * 1024 && q > 0.5) { q -= 0.1; d = c.toDataURL('image/jpeg', q); }
+      return d;
+    });
+  }
+  function renderThumbs() {
+    var box = $('thumbs'); box.textContent = '';
+    pendingPhotos.forEach(function (d, i) {
+      box.appendChild(el('div', { class: 'thumb' }, [
+        el('img', { src: d, alt: 'Photo ' + (i + 1) }),
+        el('button', { type: 'button', 'aria-label': 'Remove photo', text: '×',
+          onclick: function () { pendingPhotos.splice(i, 1); renderThumbs(); show($('photoNote'), false); } })
+      ]));
+    });
+    show($('photoPick'), pendingPhotos.length < MAX_PHOTOS);
+  }
+  $('photoInput').addEventListener('change', function () {
+    var files = Array.prototype.slice.call(this.files || []).filter(function (f) { return /^image\//.test(f.type) || !f.type; });
+    this.value = '';
+    var room = MAX_PHOTOS - pendingPhotos.length, skipped = Math.max(0, files.length - room), failed = 0;
+    files = files.slice(0, room);
+    if (!files.length) return;
+    var note = $('photoNote'); note.textContent = 'Preparing photos…'; show(note, true);
+    Promise.all(files.map(function (f) { return shrink(f).catch(function () { failed++; return null; }); })).then(function (list) {
+      list.forEach(function (d) { if (d && pendingPhotos.length < MAX_PHOTOS) pendingPhotos.push(d); });
+      renderThumbs();
+      var msgs = [];
+      if (failed) msgs.push(failed + (failed === 1 ? ' photo' : ' photos') + " couldn't be read. Try a JPEG or PNG.");
+      if (skipped) msgs.push('Only ' + MAX_PHOTOS + ' photos per entry.');
+      note.textContent = msgs.join(' '); show(note, msgs.length > 0);
+    });
+  });
+
   function resetEntryDefaults() {
     var d = new Date();
     $('date').value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
     ['odometer', 'fixed', 'notes', 'website'].forEach(function (id) { $(id).value = ''; });
+    pendingPhotos = []; renderThumbs(); show($('photoNote'), false);
   }
   resetEntryDefaults();
 
@@ -415,9 +491,10 @@
       action: 'add', garage: garage, source: store.get('mrl_src', ''), email: store.get('mrl_email', ''),
       brand: bike.brand, model: bike.model, year: bike.year, country: bike.country,
       type: entryType, date: $('date').value, odometer: odo, unit: unitPref,
-      part_failed: fixed, notes: $('notes').value.trim(), website: $('website').value
+      part_failed: fixed, notes: $('notes').value.trim(), website: $('website').value,
+      photos: entryType === 'repair' ? pendingPhotos.map(function (d) { return d.split(',')[1]; }) : []
     };
-    var btn = $('saveBtn'); btn.disabled = true; btn.textContent = 'Saving…';
+    var btn = $('saveBtn'); btn.disabled = true; btn.textContent = body.photos.length ? 'Uploading photos…' : 'Saving…';
     apiPost(body).then(function (res) {
       if (!res || !res.ok) throw new Error(res && res.error || 'Could not save');
       toast('Saved. Thanks, this helps other ' + bike.model + ' owners.');
@@ -545,6 +622,7 @@
       el('div', { class: 'entry-title' }, [el('span', { class: 'badge b-' + e.type, text: TYPE_LABEL[e.type] || e.type }), title]),
       el('div', { class: 'meta', text: meta }),
       e.notes ? el('div', { class: 'detail', text: e.notes }) : null,
+      e.photo_count ? el('div', { class: 'meta', text: e.photo_count + (e.photo_count === 1 ? ' photo' : ' photos') + ' attached' }) : null,
       el('div', { class: 'meta', style: 'margin-top:4px' }, [del])
     ]);
   }

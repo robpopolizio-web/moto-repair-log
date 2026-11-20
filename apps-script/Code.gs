@@ -1,22 +1,24 @@
-/** @OnlyCurrentDoc */
 /**
  * Moto Repair Log: backend (Google Apps Script + Google Sheet)
- * (@OnlyCurrentDoc limits the script's access to this one spreadsheet.)
  *
  * Lives in the "Moto Repair Log data" sheet: Extensions > Apps Script.
+ * Permissions are set in appsscript.json: this spreadsheet only, plus Drive
+ * files this script creates itself (the photos folder). Nothing else in Drive.
  * After editing: Deploy > Manage deployments > edit (pencil) >
  * Version: New version > Deploy. The web app URL stays the same.
  *
- * Every entry lands as one row in the "entries" tab. Emails stay in the sheet
- * and are never returned by the API. Riders only ever get back their own
- * entries (by garage code) and per-model totals.
+ * Every entry lands as one row in the "entries" tab. Photos go to the
+ * "Moto Repair Log photos" folder in Drive, private to the owner, with links
+ * in the "photos" column. Emails and photo links are never returned by the
+ * API. Riders only ever get back their own entries (by garage code) and
+ * per-model totals.
  */
 
 const SHEET_NAME = 'entries';
 const HEADERS = [
   'entry_id', 'created_at', 'garage_id', 'source', 'brand', 'model', 'model_key',
   'year', 'country', 'email', 'type', 'date', 'odometer', 'unit', 'category',
-  'part_failed', 'notes'
+  'part_failed', 'notes', 'photos'
 ];
 const TEXT_COLS = ['entry_id', 'created_at', 'garage_id', 'model', 'model_key', 'date', 'year'];
 const PUBLIC_FIELDS = [
@@ -32,25 +34,30 @@ const CATEGORIES = [
 const UNITS = ['km', 'mi'];
 const KM_PER_MI = 1.609344;
 const MAX_PER_HOUR = 60;
+const MAX_PHOTOS = 3;
+const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
+const PHOTO_FOLDER_NAME = 'Moto Repair Log photos';
 
 /* ---------- setup ---------- */
 
 function setup() {
   const sh = getSheet_();
-  Logger.log('Ready. Data goes to the "' + sh.getName() + '" tab.');
+  const folderId = photoFolderId_();
+  Logger.log('Ready. Data goes to the "' + sh.getName() + '" tab. Photos folder id: ' + folderId);
 }
 
 function getSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) sh = ss.insertSheet(SHEET_NAME);
-  const last = sh.getLastRow();
-  if (last === 0) {
+  if (sh.getLastRow() === 0) {
     writeHeaders_(sh);
-  } else if (last === 1) {
-    // No data yet: refresh the header row if the columns changed.
-    const cur = sh.getRange(1, 1, 1, sh.getLastColumn()).getDisplayValues()[0];
-    if (cur.join('|') !== HEADERS.join('|')) {
+  } else {
+    // Refresh the header row when columns were added at the end or (with no data yet) changed.
+    const cur = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getDisplayValues()[0]
+      .filter(function (h) { return h !== ''; });
+    const isPrefix = cur.every(function (h, i) { return HEADERS[i] === h; });
+    if (cur.join('|') !== HEADERS.join('|') && (isPrefix || sh.getLastRow() === 1)) {
       sh.getRange(1, 1, 1, sh.getMaxColumns()).clearContent();
       writeHeaders_(sh);
     }
@@ -61,6 +68,15 @@ function getSheet_() {
 function writeHeaders_(sh) {
   sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
   sh.setFrozenRows(1);
+}
+
+function photoFolderId_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('PHOTO_FOLDER_ID');
+  if (id) return id;
+  const folder = Drive.Files.create({ name: PHOTO_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' });
+  props.setProperty('PHOTO_FOLDER_ID', folder.id);
+  return folder.id;
 }
 
 /* ---------- HTTP ---------- */
@@ -87,16 +103,12 @@ function doPost(e) {
   // Honeypot: real people never fill the hidden "website" field.
   if (body.website) return json_({ ok: true });
 
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
   try {
     if (body.action === 'add') return json_(add_(body));
     if (body.action === 'delete') return json_(delete_(body));
     return json_({ ok: false, error: 'Unknown action' });
   } catch (err) {
     return json_({ ok: false, error: String(err && err.message || err) });
-  } finally {
-    lock.releaseLock();
   }
 }
 
@@ -122,6 +134,7 @@ function readRows_() {
 function public_(row) {
   const o = {};
   PUBLIC_FIELDS.forEach(function (f) { o[f] = row[f]; });
+  o.photo_count = row.photos ? String(row.photos).split(/\s+/).filter(String).length : 0;
   return o;
 }
 
@@ -233,16 +246,42 @@ function add_(b) {
     unit: UNITS.indexOf(b.unit) >= 0 ? b.unit : 'km',
     category: isRepair ? oneOf_(b.category, CATEGORIES, '') : 'No repairs',
     part_failed: isRepair ? clean_(b.part_failed, 300) : '',
-    notes: clean_(b.notes, 500)
+    notes: clean_(b.notes, 500),
+    photos: ''
   };
   if (isRepair && !entry.part_failed) return { ok: false, error: 'Say which part failed' };
 
-  const sh = getSheet_();
-  const r = sh.getLastRow() + 1;
-  if (r > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 200);
-  const range = sh.getRange(r, 1, 1, HEADERS.length);
-  range.setNumberFormats([HEADERS.map(function (h) { return TEXT_COLS.indexOf(h) >= 0 ? '@' : 'General'; })]);
-  range.setValues([HEADERS.map(function (h) { return safe_(entry[h]); })]);
+  // Photos first (the slow part), outside the sheet lock.
+  if (isRepair && Array.isArray(b.photos) && b.photos.length) {
+    const blobs = [];
+    b.photos.slice(0, MAX_PHOTOS).forEach(function (data, i) {
+      let bytes;
+      try { bytes = Utilities.base64Decode(String(data || '')); } catch (_) { return; }
+      if (!bytes.length || bytes.length > MAX_PHOTO_BYTES) return;
+      if ((bytes[0] & 0xff) !== 0xff || (bytes[1] & 0xff) !== 0xd8) return; // JPEG only
+      blobs.push(Utilities.newBlob(bytes, 'image/jpeg', entry.entry_id + '-' + (i + 1) + '.jpg'));
+    });
+    if (blobs.length) {
+      const folderId = photoFolderId_();
+      entry.photos = blobs.map(function (blob) {
+        const f = Drive.Files.create({ name: blob.getName(), parents: [folderId] }, blob);
+        return 'https://drive.google.com/file/d/' + f.id + '/view';
+      }).join(' ');
+    }
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sh = getSheet_();
+    const r = sh.getLastRow() + 1;
+    if (r > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 200);
+    const range = sh.getRange(r, 1, 1, HEADERS.length);
+    range.setNumberFormats([HEADERS.map(function (h) { return TEXT_COLS.indexOf(h) >= 0 ? '@' : 'General'; })]);
+    range.setValues([HEADERS.map(function (h) { return safe_(entry[h]); })]);
+  } finally {
+    lock.releaseLock();
+  }
 
   cache.put(ck, String(count + 1), 3600);
   return { ok: true, entry: public_(entry) };
@@ -252,20 +291,35 @@ function delete_(b) {
   const garage = String(b.garage || '');
   const id = String(b.entry_id || '');
   if (!validGarage_(garage) || !/^[a-f0-9]{12}$/.test(id)) return { ok: false, error: 'Bad request' };
-  const sh = getSheet_();
-  const n = sh.getLastRow();
-  if (n < 2) return { ok: false, error: 'Entry not found' };
-  const idCol = HEADERS.indexOf('entry_id') + 1;
-  const gCol = HEADERS.indexOf('garage_id') + 1;
-  const ids = sh.getRange(2, idCol, n - 1, 1).getDisplayValues();
-  const gs = sh.getRange(2, gCol, n - 1, 1).getDisplayValues();
-  for (let i = 0; i < ids.length; i++) {
-    if (ids[i][0] === id && gs[i][0] === garage) {
-      sh.deleteRow(i + 2);
-      return { ok: true };
+  let photos = '';
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sh = getSheet_();
+    const n = sh.getLastRow();
+    if (n < 2) return { ok: false, error: 'Entry not found' };
+    const idCol = HEADERS.indexOf('entry_id') + 1;
+    const gCol = HEADERS.indexOf('garage_id') + 1;
+    const pCol = HEADERS.indexOf('photos') + 1;
+    const ids = sh.getRange(2, idCol, n - 1, 1).getDisplayValues();
+    const gs = sh.getRange(2, gCol, n - 1, 1).getDisplayValues();
+    let found = -1;
+    for (let i = 0; i < ids.length; i++) {
+      if (ids[i][0] === id && gs[i][0] === garage) { found = i + 2; break; }
     }
+    if (found < 0) return { ok: false, error: 'Entry not found' };
+    photos = sh.getRange(found, pCol).getDisplayValue();
+    sh.deleteRow(found);
+  } finally {
+    lock.releaseLock();
   }
-  return { ok: false, error: 'Entry not found' };
+  // Move the entry's photos to the Drive trash.
+  String(photos || '').split(/\s+/).forEach(function (url) {
+    const m = /\/file\/d\/([^/]+)/.exec(url);
+    if (!m) return;
+    try { Drive.Files.update({ trashed: true }, m[1]); } catch (_) {}
+  });
+  return { ok: true };
 }
 
 /* ---------- helpers ---------- */
