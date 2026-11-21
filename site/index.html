@@ -162,8 +162,8 @@
               <select id="unit" aria-label="Distance unit"><option>km</option><option>mi</option></select>
             </div>
           </div>
-          <div>
-            <label for="date">When <span class="hint">(roughly)</span></label>
+          <div data-show="repair">
+            <label for="date">When did it fail? <span class="hint">(month, roughly)</span></label>
             <input id="date" type="month">
           </div>
         </div>
@@ -177,8 +177,10 @@
           <p id="photoNote" class="note hidden"></p>
         </div>
 
-        <label for="notes">Notes <span class="hint">(optional)</span></label>
-        <textarea id="notes" maxlength="500" placeholder="Symptoms, anything another owner should know"></textarea>
+        <div data-show="repair">
+          <label for="notes">Notes <span class="hint">(optional)</span></label>
+          <textarea id="notes" maxlength="500" placeholder="Symptoms, anything another owner should know"></textarea>
+        </div>
 
         <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" tabindex="-1" autocomplete="off"></div>
         <p id="entryError" class="error hidden" role="alert"></p>
@@ -491,7 +493,7 @@
       action: 'add', garage: garage, source: store.get('mrl_src', ''), email: store.get('mrl_email', ''),
       brand: bike.brand, model: bike.model, year: bike.year, country: bike.country,
       type: entryType, date: $('date').value, odometer: odo, unit: unitPref,
-      part_failed: fixed, notes: $('notes').value.trim(), website: $('website').value,
+      part_failed: fixed, notes: entryType === 'repair' ? $('notes').value.trim() : '', website: $('website').value,
       photos: entryType === 'repair' ? pendingPhotos.map(function (d) { return d.split(',')[1]; }) : []
     };
     var btn = $('saveBtn'); btn.disabled = true; btn.textContent = body.photos.length ? 'Uploading photos…' : 'Saving…';
