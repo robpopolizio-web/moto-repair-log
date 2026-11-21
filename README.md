@@ -1,8 +1,8 @@
 # Moto Repair Log
 
-A simple page where motorcycle owners log what broke on their bike, at what mileage, and what it cost to fix. Entries go to a private Google Sheet through a Google Apps Script web app. The page shows each rider their own log plus totals for their model.
+Owner-logged motorcycle failures by model: which part failed and at what mileage.
 
-- `index.html`: the page (hosted with GitHub Pages)
-- `apps-script/Code.gs`: a copy of the backend that runs in Google Apps Script, bound to the data sheet
+- `site/index.html`: the page (Cloudflare Pages)
+- `apps-script/`: the Google Apps Script backend bound to the data sheet
 
-To change the backend, edit it in Apps Script and redeploy: Deploy > Manage deployments > edit > Version: New version > Deploy. The web app URL stays the same.
+See CLAUDE.md for how everything fits together and how to deploy.
