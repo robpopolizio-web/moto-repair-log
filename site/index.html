@@ -202,6 +202,7 @@
     </form>
     <p id="restoreError" class="error hidden" role="alert"></p>
     <p>Only totals per model are shown publicly. Your email, if you give one, is never displayed.</p>
+    <p>Reliability reports: <a href="/yamaha-mt-07-reliability/">Yamaha MT-07</a> · <a href="/yamaha-mt-09-reliability/">Yamaha MT-09</a></p>
   </footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -649,6 +650,16 @@
       toast('Garage loaded'); loadStats();
     });
   });
+
+  /* ---------- prefill from report pages (?brand=Yamaha&model=MT-07) ---------- */
+  (function () {
+    var pb = (qs.get('brand') || '').slice(0, 40), pm = (qs.get('model') || '').slice(0, 60);
+    if (!pb && !pm) return;
+    if (BRANDS.indexOf(pb) >= 0) $('brand').value = pb;
+    else if (pb) { $('brand').value = 'Other'; $('brandOther').value = pb; show($('brandOtherWrap'), true); }
+    if (pm) $('model').value = pm;
+    if (bikes.length) $('setupCard').dataset.open = '1';
+  })();
 
   /* ---------- go ---------- */
   render();
