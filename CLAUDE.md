@@ -36,6 +36,10 @@ After a deploy, test on the live URL with `?src=test`: add a bike named `TEST-DE
 
 Front-end-only changes need only `deploy:page`. If a change touches what the page sends or receives, deploy the script first, then the page.
 
+## NHTSA motorcycle data
+
+`python3 tools/nhtsa_motorcycles.py` downloads NHTSA's public complaints file, keeps motorcycles only (vPIC decides which Honda/Yamaha/Kawasaki/Suzuki/BMW/Can-Am models are motorcycles), and writes `data/nhtsa/motorcycle_complaints.csv`, `model_summary.csv` and `motorcycle_recalls.csv`. `data/` is not committed (large). Personal fields (VIN, city, dealer, operator name) are never copied. NHTSA complaints are US-only, owner-submitted and safety-related: label them as such on any page and keep them separate from the owner log counts.
+
 ## One-time setup on a new computer
 
 1. Install Node.js 20+ if `node -v` fails (`brew install node`).
