@@ -32,6 +32,10 @@ blockquote{background:var(--card);border:1px solid var(--line);border-radius:12p
 blockquote .who{display:block;font-size:.8rem;color:var(--muted);margin-bottom:6px}
 .filter{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin:6px 0 10px}
 .cols{columns:3 220px;column-gap:24px;padding-left:18px}
+details.rc h4{margin:16px 0 0;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+details.rc ul{margin:6px 0 0;padding-left:18px;font-size:.93rem}
+details.rc ul.docs{list-style:none;padding-left:0}
+details.rc ul.docs li{margin:3px 0}
 .warn{background:#fff8e6;border:1px solid #f0dca8;border-radius:10px;padding:12px 16px;font-size:.92rem}
 """
 
@@ -193,6 +197,14 @@ recalls = defaultdict(lambda: defaultdict(list))   # (make, family) -> campaign 
 for r in con.execute("select * from recalls"):
     recalls[(r["make"], r["model_family"])][r["campaign"]].append(dict(r))
 
+# the makers' own recall documents (tools/nhtsa_recall_docs.py); optional
+details, documents = {}, defaultdict(list)
+if con.execute("select 1 from sqlite_master where name='recall_details'").fetchone():
+    for r in con.execute("select * from recall_details"):
+        details[r["campaign"]] = dict(r)
+    for r in con.execute("select * from recall_documents order by load_date, doc_id"):
+        documents[r["campaign"]].append(dict(r))
+
 # give each make/model a unique slug
 make_slug = {}
 for m in sorted(set(x["make"] for x in models) | set(k[0] for k in recalls)):
@@ -228,6 +240,68 @@ os.makedirs(OUT)
 
 
 # ---------------------------------------------------------------- recall block
+DOC_ORDER = ["Defect report (Part 573)", "Owner letter", "Dealer notice", "Workshop instructions and service bulletin",
+             "Same recall in other countries", "Quarterly progress report", "Correspondence with NHTSA", "Other"]
+
+
+def clip(t, n=900):
+    t = tidy(t)
+    return t if len(t) <= n else t[:n].rsplit(" ", 1)[0] + " …"
+
+
+def maker_html(camp):
+    """The maker's own account from its Part 573 report, plus links to every official document."""
+    d, docs = details.get(camp) or {}, documents.get(camp, [])
+    out = []
+    facts = []
+    if d.get("cause"):
+        facts.append(f"<p><b>Cause.</b> {e(clip(d['cause']))}</p>")
+    if d.get("remedy_differs"):
+        facts.append(f"<p><b>What the new part or software changes.</b> {e(clip(d['remedy_differs']))}</p>")
+    if d.get("production_fix"):
+        facts.append(f"<p><b>Fixed in production.</b> {e(clip(d['production_fix'], 500))}</p>")
+    bits = []
+    if d.get("remedy_type"):
+        bits.append(f"Fix type: {e(d['remedy_type'])}" + (" (over the air)" if d.get("over_the_air") else ""))
+    if d.get("supplier"):
+        sup = tidy(d["supplier"]).title() if d["supplier"].isupper() else d["supplier"]
+        bits.append(f"Part made by: {e(sup)}" + (f", {e(d['supplier_country'])}" if d.get("supplier_country") else ""))
+    if d.get("mfr_campaign"):
+        bits.append(f"Maker's recall no. {e(d['mfr_campaign'])}")
+    if bits:
+        facts.append(f"<p>{' · '.join(bits)}</p>")
+    if d.get("chronology"):
+        steps = [x.strip() for x in d["chronology"].split("\n") if x.strip()]
+        if len(steps) > 8:
+            steps = steps[:7] + [f"… {len(steps) - 7} more steps in the defect report."]
+        facts.append("<p><b>How the problem was found.</b></p><ul>" + "".join(f"<li>{e(clip(x, 400))}</li>" for x in steps) + "</ul>")
+    if facts:
+        out.append("<h4>From the maker's defect report to NHTSA</h4>" + "".join(facts))
+    # one link per kind, newest version, acknowledgements left out
+    by_kind = {}
+    for x in docs:
+        if x["kind"] != "NHTSA acknowledgement":
+            by_kind.setdefault(x["kind"], []).append(x)
+    if by_kind:
+        li = []
+        for k in sorted(by_kind, key=lambda k: DOC_ORDER.index(k) if k in DOC_ORDER else 99):
+            xs = by_kind[k]
+            if k in ("Defect report (Part 573)", "Quarterly progress report"):
+                xs = xs[-1:]
+                label = k + ((" (latest of " + str(len(by_kind[k])) + ")") if len(by_kind[k]) > 1 else "")
+                li.append(f'<li><a href="{e(xs[0]["url"])}" rel="nofollow noopener" target="_blank">{e(label)}</a> · PDF · {e(xs[0]["load_date"])}</li>')
+            else:
+                shown = xs[-6:]
+                if len(shown) == 1:
+                    links = f'<a href="{e(shown[0]["url"])}" rel="nofollow noopener" target="_blank">PDF</a>'
+                else:
+                    links = " · ".join(f'<a href="{e(x["url"])}" rel="nofollow noopener" target="_blank">PDF {i}</a>' for i, x in enumerate(shown, 1))
+                more = f" and {len(xs) - 6} older" if len(xs) > 6 else ""
+                li.append(f"<li>{e(k)}: {links}{more}</li>")
+        out.append("<h4>Official documents</h4><ul class=\"docs\">" + "".join(li) + "</ul>")
+    return "\n".join(out)
+
+
 def recall_html(camps):
     out = []
     for camp, rows in sorted(camps.items(), key=lambda kv: kv[1][0]["report_date"] or "", reverse=True):
@@ -237,10 +311,13 @@ def recall_html(camps):
         units = f" · {fmt(r['units_affected'])} bikes" if r["units_affected"] else ""
         comp = group_of(r["component"] or "") if r["component"] else OTHER
         flags = " · <b>Do not ride until fixed</b>" if any(x["do_not_drive"] for x in rows) else ""
-        out.append(f"""<details class="rc"><summary>{e(comp)}: {e(ys)} <span>· {e(camp)} · {e(date)}{units}{flags}</span></summary>
+        subj = (details.get(camp) or {}).get("subject")
+        title = f"{e(subj)} ({e(comp.lower())})" if subj else e(comp)
+        out.append(f"""<details class="rc"><summary>{title}: {e(ys)} <span>· {e(camp)} · {e(date)}{units}{flags}</span></summary>
 <p><b>Problem.</b> {e(tidy(r['defect']))}</p>
 <p><b>Risk.</b> {e(tidy(r['consequence']))}</p>
 <p><b>Fix.</b> {e(tidy(r['remedy']))}</p>
+{maker_html(camp)}
 <p><a href="{e(r['nhtsa_url'] or 'https://www.nhtsa.gov/recalls')}" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>""")
     return "\n".join(out)
 
@@ -331,7 +408,7 @@ for m in models:
                      f"<tbody>{''.join(yrows)}</tbody></table>"]
 
     if camps:
-        body += [f"<h2>Recalls ({len(camps)})</h2>", "<p>Newest first. Open one to read the problem, the risk and the fix.</p>", recall_html(camps)]
+        body += [f"<h2>Recalls ({len(camps)})</h2>", "<p>Newest first. Open one to read the problem, the risk and the fix, plus the cause and timeline from the maker's own defect report and links to the official documents.</p>", recall_html(camps)]
 
     if n:
         pick = sorted(cs, key=lambda c: (c["received_date"] or ""), reverse=True)
