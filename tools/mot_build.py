@@ -88,9 +88,41 @@ def item_map():
     return out
 
 
+TRIM_SUFFIX = {"ABS", "SE", "SP", "LE", "A", "TH", "ED"}
+
+
+def _suffix(x):
+    """Model letters after the number, without ABS/year codes: XA-K -> X, RR-8 -> RR, GS -> GS."""
+    m = re.fullmatch(r"([A-Z]{1,3})(-[A-Z0-9]{1,2})?", x)
+    if not m or m.group(1) in TRIM_SUFFIX:
+        return None
+    core = m.group(1)
+    if m.group(2) and len(core) > 1 and core.endswith("A"):     # Honda: XA-K = X, ABS, year K
+        core = core[:-1]
+    return core
+
+
 def first_word(model):
-    w = (model or "").strip().upper().split()
-    return re.sub(r"[^A-Z0-9-]+", "", w[0]) if w else ""
+    """The model code at the start of a DVSA name, rejoined when typed with spaces:
+    "CB 500 XA-K" -> CB500X, "MT 07" -> MT07, "R1200 GS" -> R1200GS, "CBR 1000 RR-8" -> CBR1000RR,
+    "1290 SUPERDUKE R 21" -> 1290SUPERDUKER. Words like ADVENTURE or trims (ABS, SE, SP) are not joined."""
+    t = [re.sub(r"[^A-Z0-9-]+", "", x) for x in (model or "").strip().upper().split()]
+    t = [x for x in t if x]
+    if not t:
+        return ""
+    w, i = t[0], 1
+    w = re.sub(r"(?<=\d)([A-Z]{1,2}?)A?-[A-Z0-9]{1,2}$", r"\1", w)     # CB500XA-K written as one word
+    if re.fullmatch(r"[A-Z]{1,3}-?", w) and i < len(t) and re.match(r"\d", t[i]):
+        w += re.sub(r"-[A-Z0-9]{1,2}$", "", t[i]); i += 1
+    elif re.fullmatch(r"[A-Z]", w) and i < len(t) and re.fullmatch(r"[A-Z]{4,}", t[i]):
+        w += t[i]; i += 1                                            # BMW: R NINET -> RNINET
+    elif re.fullmatch(r"\d{2,4}", w) and i < len(t) and re.fullmatch(r"[A-Z]{3,}", t[i]):
+        w += t[i]; i += 1                                            # KTM / Ducati: 1290 SUPERDUKE
+    if re.search(r"\d", w) and i < len(t):
+        suf = _suffix(t[i])
+        if suf:
+            w += suf
+    return w
 
 
 def norm_word(w, cc=0):
@@ -99,7 +131,7 @@ def norm_word(w, cc=0):
     Other letters after the number are kept, so CB125F and CB125R stay different bikes."""
     w = w.replace("-", "")
     w = re.sub(r"(?<=\d)(ABS|SP|SE|A)$", "", w) or w
-    m = re.fullmatch(r"([A-Z]+)(\d{3,4})", w)
+    m = re.fullmatch(r"([A-Z]{4,})(\d{3,4})", w)       # word names only (TIGER1050), never codes (R1150, CB1300)
     if m and cc and abs(int(m.group(2)) - cc) <= 0.1 * cc:
         w = m.group(1)
     return w
