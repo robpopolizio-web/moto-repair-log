@@ -38,11 +38,24 @@ TRIM_WORDS = {"ABS", "NON", "DCT", "SE", "SP", "TOUR", "INTERSTATE", "SHRINE", "
               "96", "103", "107", "110", "114", "117", "121", "TWIN", "COOLED", "CVO_KEEP"}
 NEVER_ALONE = {"MOTORCYCLE", "MOTORCYCLES", "UNKNOWN", "OTHER", "ALL", "SCOOTER", "MOPED", "ATV"}
 MAKE_DISPLAY = {"BMW": "BMW", "KTM": "KTM", "MV AGUSTA": "MV Agusta", "CFMOTO": "CFMoto", "HARLEY-DAVIDSON": "Harley-Davidson",
-                "CAN-AM": "Can-Am", "GASGAS": "GasGas", "SYM": "SYM", "LIVEWIRE": "LiveWire", "AJS": "AJS"}
+                "CAN-AM": "Can-Am", "GASGAS": "GasGas", "SYM": "SYM", "LIVEWIRE": "LiveWire", "AJS": "AJS",
+                "BSA": "BSA", "MZ": "MZ", "CCM": "CCM", "AJP": "AJP", "SWM": "SWM", "TGB": "TGB", "LML": "LML", "WK": "WK",
+                "UM": "UM", "FB MONDIAL": "FB Mondial", "MBK": "MBK", "ATK": "ATK", "AMC": "AMC", "BSA REGAL": "BSA Regal"}
 
 
 # factory codes some sources use for a model known by name: (make, first word of code) -> name
 CODE_ALIASES = {("HONDA", "GL"): "Gold Wing", ("HONDA", "GOLDWING"): "Gold Wing"}
+# factory codes DVSA records use for bikes sold under a name (GLR125 is the CB125F, NSC110 the Vision 110)
+UK_CODES = {("HONDA", "GLR"): "CB125F", ("HONDA", "NSC"): "Vision", ("HONDA", "WW"): "PCX", ("HONDA", "SH"): "SH",
+            ("HONDA", "FES"): "S-Wing", ("HONDA", "NSS"): "Forza", ("HONDA", "ANF"): "Innova", ("HONDA", "SCV"): "Lead"}
+# factory codes for bikes better known by name: joined-name regex -> replacement
+SYNONYMS = {"SUZUKI": [(r"^GSF(\d)", r"BANDIT\1")], "HONDA": [(r"^CBR1100X$", "CBR1100XX"), (r"^VFR800FI$", "VFR800")]}
+# variant codes after a model name; group 1 is the model. Only merged when that model exists.
+VARIANT_SUFFIX = {
+    "*": [r"(?!.*GSA$)(.*\d[A-Z]*?[A-Z])A", r"(.*\d.*?)ABS", r"(.*\d[A-Z]*)FI"],   # A = ABS (CB500XA), FI = fuel injection
+    "SUZUKI": [r"(.*\d[A-Z]*?)[KLM]\d"],                                 # K7 = 2007, L1 = 2011
+    "YAMAHA": [r"(.*\d[A-Z]?)[A-Z]{0,2}C"],                               # California models (YZFR1KC)
+}
 # Harley-Davidson factory codes (used by DVSA, DfT and often Transport Canada) -> model names.
 # A trailing I (fuel injection) is ignored: FLSTCI = FLSTC.
 HD_CODES = {
@@ -162,6 +175,13 @@ def main():
                 if c in HD_CODES:
                     bt = tok(HD_CODES[c])
                     break
+        uk = UK_CODES.get((make_key(make), bt[0]))
+        if uk:   # WW 125 A-P -> PCX 125, GLR 125 1WH-H -> CB125F, NSC 110 M -> Vision 110
+            ut = tok(uk)
+            rest = bt[1:]
+            if rest and rest[0] in ut:
+                rest = rest[1:]
+            bt = ut + rest
         alias = CODE_ALIASES.get((make_key(make), bt[0]))
         if alias and (bt[0] == "GOLDWING" or (len(bt) > 1 and bt[1] in ("1000", "1100", "1200", "1500", "1800")) or (cc and cc >= 1000)):
             bt = tok(alias)
@@ -178,7 +198,22 @@ def main():
                     hit = (key, "name inside")
                     break
         if not hit:
+            cc = cc or engine_number(bt)   # "VESPA GTS 300 SUPER" says its own size
             starts = {key for t, key in cands if t[:len(bt)] == bt and len(t) > len(bt)}
+            if cc and starts:
+                # MT at 690 cc can only be the MT-07; YZF at 120 cc is none of R1/R3/R6/R7
+                size = {k: engine_number(list(k[1])) or bikes[k]["cc"] for k in starts}
+                fit = sorted((k for k in starts if size[k] and abs(size[k] - cc) <= 0.12 * size[k]), key=lambda k: abs(size[k] - cc))
+                # clearly closest wins: MT at 690 cc is the MT-07 (689), not the 2006 MT-03 (660)
+                if len(fit) >= 2 and abs(size[fit[0]] - cc) <= 0.03 * cc and \
+                        abs(size[fit[0]] - cc) * 3 < abs(size[fit[1]] - cc) and size[fit[0]] != size[fit[1]]:
+                    fit = fit[:1]
+                if len(fit) == 1:
+                    return fit[0], "name + engine size"
+                if not fit and all(size.values()):
+                    return None, "no model with this engine size"
+                if fit:
+                    starts = set(fit)
             if len(starts) >= 2:
                 return None, "fits several models: " + ", ".join(sorted(bikes[k]["model"] for k in starts)[:4])
             return None, "no matching model"
@@ -195,7 +230,7 @@ def main():
         trims = defaultdict(list)
         for mk, mkey, name, t in m.execute("select make, model_key, name, tests from model_trims"):
             trims[(mk, mkey)].append((name, t))
-        for mk, mkey, model, cc, tests in rows:
+        def link(mk, mkey, model, cc, tests, last):
             # 1. vote: match each full DVSA name in the family ("STREET TRIPLE R", "FLHX STREET GLIDE")
             votes, matched = Counter(), 0
             fam_tokens = tok(model)
@@ -225,27 +260,53 @@ def main():
                         d = abs(int(t[-1]) - cc) / cc
                         if d <= 0.15 and (best is None or d < best[0]):
                             best = (d, k2)
+                # but not when a longer name with another engine size also fits (CB at 470 cc: CB450 or CB500F/X?)
+                if best:
+                    other = {engine_number(t) or bikes[k2]["cc"] for t, k2 in index.get(make_key(mk), [])
+                             if len(t) > len(ft) + 1 and t[:len(ft)] == ft}
+                    other = {e for e in other if e and abs(e - cc) <= 0.15 * cc}
+                    if other - {int(best[1][1][-1])}:
+                        best = None
                 if best:
                     key, rule = best[1], "name + engine size"
+            code = UK_CODES.get((make_key(mk), (tok(model) or [""])[0]))
+            if not key and code:
+                key, rule = find(mk, code, cc)
+                model = code if not key else model
             if not key:
                 key, rule = find(mk, model, cc)
                 if key:
                     bl = re.sub(r"[^A-Z]", "", "".join(key[1]))
                     if fam_word and fam_word not in bl and bl not in fam_word:
                         key, rule = None, "different model word"
+            if not key and not last and rule.startswith("fits several"):
+                return False   # retry once every named model has its engine size from its own records
+            name_only = rule in ("no matching model", "no model with this engine size") and len(re.sub(r"[^A-Z]", "", model.upper())) >= 3
             if not key:
-                if tests >= 100 and (re.search(r"\d", model) or rule == "different model word") and not rule.startswith("fits several"):
-                    disp_mk = MAKE_DISPLAY.get(mk, " ".join(w.capitalize() for w in mk.split()))
+                if tests >= 100 and (re.search(r"\d", model) or rule == "different model word" or name_only) and not rule.startswith("fits several"):
+                    disp_mk = MAKE_DISPLAY.get(make_key(mk), " ".join(w.capitalize() for w in make_key(mk).split()))
                     best_name = max(trims[(mk, mkey)], key=lambda x: x[1])[0] if trims[(mk, mkey)] else model
-                    disp = model if re.search(r"\d", model) else f"{model.title()} {cc}"
+                    # "Vespa 125", not "Vespa 120": the size its riders write, when the records give one
+                    sizes = Counter()
+                    for nm, t in trims[(mk, mkey)]:
+                        for w in tok(nm):
+                            if w.isdigit() and cc and abs(int(w) - cc) <= 0.12 * int(w):
+                                sizes[int(w)] += t
+                    size = sizes.most_common(1)[0][0] if sizes else cc
+                    disp = model if re.search(r"\d", model) else f"{model.title() if model.isupper() and len(model) > 4 else model} {size}"   # Vespa 125, YZF 125
                     key, rule = add_bike(disp_mk, disp, "UK MOT", cc), "new UK-only model"
                 else:
                     out.execute("insert into unassigned values (?,?,?,?,?,?)", ("UK MOT", mk, model, cc, rule or "bare name", tests))
-                    continue
+                    return True
             b = bikes[key]
             b["mot"].append((mk, mkey, tests, rule))
             b["cc"] = b["cc"] or cc
             b["aliases"].append(("UK MOT", mk, model, cc, rule))
+            return True
+
+        later = [r for r in rows if not link(*r, last=False)]
+        for r in later:
+            link(*r, last=True)
 
     # ---- 3. recalls from other countries, investigations, UK fleet
     for src, country, camp, mk, model in n.execute("select source, country, campaign, make, model from world_recalls"):
@@ -299,6 +360,82 @@ def main():
                 out.execute("insert into unassigned values (?,?,?,?,?,?)", ("EU Safety Gate", brand, name, None, f"alert {case}", 1))
 
     # UK DVSA recalls come in through world_recalls (tools/world_sources.py)
+
+    # ---- 4. merge names that are the same bike
+    # Sources name one model differently: a factory code (GSF600 = Bandit 600), a shorter form of the
+    # name (ZX-6R = Ninja ZX-6R, R6 = YZF-R6), or a variant code (CB500XA = CB500X with ABS,
+    # GSF1250SAK7 = 2007 GSF1250SA, YZFR1KC = Yamaha's California R1). Merge them into one bike.
+    def canon(b):
+        t = [w for w in tok(re.sub(r"\(.*?\)", " ", b["model"])) if w != "REDUNDANT"]
+        j = "".join(base_tokens(t))
+        for pat, rep in SYNONYMS.get(make_key(b["make"]), []):
+            j = re.sub(pat, rep, j)
+        return j
+
+    def merge_into(dst, src):
+        for f in ("us", "mot", "rec", "aliases"):
+            dst[f] += src[f]
+        for f in ("inv", "years", "us_recalls"):
+            dst[f] |= src[f]
+        dst["names"] += src["names"]
+        dst["us_complaints"] += src["us_complaints"]
+        dst["fleet"][0] += src["fleet"][0]; dst["fleet"][1] += src["fleet"][1]
+        dst["fleet"][2] = dst["fleet"][2] or src["fleet"][2]
+        dst["cc"] = dst["cc"] or src["cc"]
+        if dst["origin"] != "NHTSA" and src["origin"] == "NHTSA":
+            dst["origin"] = "NHTSA"
+
+    merged, merge_log = 0, []
+    def us_named(k):
+        return bikes[k]["origin"] == "NHTSA" and bikes[k]["us_complaints"] > 0
+    for _ in range(4):   # chains: GSF1250SAK7 -> GSF1250SA -> GSF1250S -> Bandit 1250S
+        by = defaultdict(dict)
+        ctoks = {}
+        for key, b in bikes.items():
+            by[make_key(b["make"])].setdefault(canon(b), []).append(key)
+            ctoks[key] = [w for w in base_tokens(tok(re.sub(r"\(.*?\)", " ", b["model"]))) if w != "REDUNDANT"]
+        target = {}
+        def plan(group, prefer):
+            # never merge two US models that both have their own complaints (Shadow Spirit vs Shadow Aero)
+            if sum(us_named(k) for k in group) > 1:
+                return
+            def plain(k):   # the name is already the one people use (Bandit 400, not GSF400; CBR1100XX, not CBR1100X)
+                return "".join(ctoks[k]) == canon(bikes[k]) and not bikes[k]["model"].lower().startswith("redundant")
+            keep = max(prefer, key=lambda k: (plain(k), us_named(k), bikes[k]["origin"] == "NHTSA", sum(x[2] for x in bikes[k]["mot"])))
+            for k in group:
+                if k != keep and k not in target and keep not in target and k not in target.values():
+                    target[k] = keep
+        for mk, names in by.items():
+            for j, keys in names.items():
+                if len(keys) > 1:                                   # same name once brackets and trims go
+                    plan(keys, keys)
+                if not (re.search(r"\d", j) and re.search(r"[A-Z]", j)):
+                    continue
+                for cut in VARIANT_SUFFIX.get(mk, []) + VARIANT_SUFFIX["*"]:
+                    m = re.fullmatch(cut, j)
+                    if m and m.group(1) in names and m.group(1) != j:
+                        plan(keys + names[m.group(1)], names[m.group(1)])   # keep the plain model name
+                        break
+                else:
+                    # a shorter form of a longer name: ZX-6R = Ninja ZX-6R, R6 = YZF-R6, T100 = Bonneville T100.
+                    # The extra part must be a word of 3+ letters (not C90 = XC90, Z650 = KZ650).
+                    # Compared word by word, so M800 is not the end of V-STROM 800.
+                    mine = ctoks[keys[0]]
+                    longer = [j2 for j2 in names if j2 != j and any(
+                        len(t2) > len(mine) and t2[-len(mine):] == mine and all(w.isalpha() and len(w) >= 3 for w in t2[:-len(mine)])
+                        for t2 in (ctoks[k] for k in names[j2]))]
+                    if len(longer) == 1:
+                        plan(keys + names[longer[0]], names[longer[0]])
+        if not target:
+            break
+        for k, keep in target.items():
+            if k in bikes and keep in bikes:
+                merge_log.append((bikes[k]["make"], bikes[k]["model"], bikes[keep]["model"]))
+                merge_into(bikes[keep], bikes.pop(k))
+                merged += 1
+    print(f"merged {merged} duplicate names")
+    out.execute("create table merges (make TEXT, merged_name TEXT, into_name TEXT)")
+    out.executemany("insert into merges values (?,?,?)", merge_log)
 
     # ---- write
     bid = 0
