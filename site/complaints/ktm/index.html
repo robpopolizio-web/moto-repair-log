@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KTM Motorcycle Problems &amp; Recalls by Model (NHTSA)</title>
+<meta name="description" content="337 US owner complaints and 27 recalls for KTM motorcycles, by model, from NHTSA data.">
+<link rel="canonical" href="https://motorcycle-reliability-index.pages.dev/complaints/ktm/">
+
+<style>
+:root{--bg:#f5f3ee;--card:#fff;--ink:#1c1c1a;--muted:#6a675f;--line:#e2ded4;--accent:#b8430f;--accent-soft:#fbeee6;--ok:#2e6b3c;--ok-soft:#e6f2e8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:24px 18px 80px}
+nav.crumbs{font-size:.85rem;color:var(--muted);margin-bottom:10px}
+nav.crumbs a{color:var(--muted)}
+h1{font-size:2rem;line-height:1.15;margin:6px 0 10px;letter-spacing:-.01em}
+h2{font-size:1.3rem;margin:34px 0 10px;line-height:1.25}
+h3{font-size:1.05rem;margin:22px 0 6px}
+p{margin:0 0 14px}
+a{color:var(--accent)}
+.lede{font-size:1.08rem;color:#3a3833}
+.meta{font-size:.85rem;color:var(--muted);margin-bottom:18px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 8px;text-align:center}
+.stat b{display:block;font-size:1.6rem;line-height:1.15}
+.stat span{font-size:.78rem;color:var(--muted)}
+.answer{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:16px 18px;margin:8px 0 6px}
+.answer p:last-child{margin:0}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:.93rem;margin:6px 0 8px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#faf8f3;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.n{text-align:center;font-weight:700;white-space:nowrap}
+.issue{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0}
+.issue h3{margin-top:0}
+.tag{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:2px}
+ul{padding-left:20px;margin:0 0 14px}
+li{margin:4px 0}
+.ok{color:var(--ok);font-weight:600}
+.cta{background:var(--ink);color:#fff;border-radius:14px;padding:22px;margin:34px 0}
+.cta h2{margin-top:0;color:#fff}
+.cta a.btn{display:inline-block;background:#fff;color:var(--ink);font-weight:700;padding:11px 18px;border-radius:9px;text-decoration:none;margin-top:4px}
+.note{font-size:.88rem;color:var(--muted)}
+footer{margin-top:40px;font-size:.85rem;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+@media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}h1{font-size:1.6rem}table{font-size:.86rem}th,td{padding:8px}}
+
+.wrap.wide{max-width:960px}
+.bar{display:inline-block;height:8px;border-radius:4px;background:var(--accent);vertical-align:middle;margin-right:6px}
+td.num,th.num{text-align:right;white-space:nowrap}
+details.rc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:10px 0}
+details.rc summary{cursor:pointer;font-weight:600}
+details.rc summary span{font-weight:400;color:var(--muted);font-size:.9rem}
+details.rc p{margin:10px 0 0;font-size:.95rem}
+blockquote{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:12px 0;padding:14px 18px;font-size:.95rem}
+blockquote .who{display:block;font-size:.8rem;color:var(--muted);margin-bottom:6px}
+.filter{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin:6px 0 10px}
+.cols{columns:3 220px;column-gap:24px;padding-left:18px}
+.warn{background:#fff8e6;border:1px solid #f0dca8;border-radius:10px;padding:12px 16px;font-size:.92rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="crumbs"><a href="/">Moto Repair Log</a> › <a href="/complaints/">Complaints</a> › KTM</nav>
+<h1>KTM motorcycle problems and recalls</h1>
+<p class="meta">337 US owner complaints across 45 models · 27 recall campaigns · NHTSA data to 2026-11-25</p>
+<p class="warn">These are complaints US owners filed with NHTSA, the US road safety agency. NHTSA does not check them, they are mostly about safety (stalling, brakes, fires, crashes), and popular bikes get more complaints simply because more of them are on the road. Use them to see <b>what goes wrong</b>, not to compare how often.</p>
+<h2>Models</h2>
+<input class="filter" placeholder="Filter models" oninput="f(this)" aria-label="Filter models">
+<table id='t'><thead><tr><th>Model</th><th>Years</th><th class='num'>Complaints</th><th class='num'>Recalls</th><th class='num'>Median miles</th></tr></thead><tbody><tr><td><a href='/complaints/ktm/790-890-adv-r-rally/'>790/890 Adv R, Rally</a></td><td>2021-2025</td><td class='num'>36</td><td class='num'>3</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/790-adventure/'>790 Adventure</a></td><td>2019-2020</td><td class='num'>29</td><td class='num'>2</td><td class='num'>1,825</td></tr><tr><td><a href='/complaints/ktm/adventure/'>Adventure</a></td><td>2020-2026</td><td class='num'>29</td><td class='num'>3</td><td class='num'>300</td></tr><tr><td><a href='/complaints/ktm/single-cylinder-lc4-duke/'>Single Cylinder LC4 Duke</a></td><td>2013-2016</td><td class='num'>22</td><td class='num'>3</td><td class='num'>2,000</td></tr><tr><td><a href='/complaints/ktm/enduro-four-stroke/'>Enduro Four-Stroke</a></td><td>2006-2025</td><td class='num'>21</td><td class='num'>5</td><td class='num'>260</td></tr><tr><td><a href='/complaints/ktm/300-xc-w/'>300 XC-W</a></td><td>2006-2007</td><td class='num'>19</td><td class='num'>0</td><td class='num'>35</td></tr><tr><td><a href='/complaints/ktm/super-duke-r/'>Super Duke R</a></td><td>2015-2024</td><td class='num'>19</td><td class='num'>4</td><td class='num'>1,500</td></tr><tr><td><a href='/complaints/ktm/690-enduro/'>690 Enduro</a></td><td>2008-2023</td><td class='num'>17</td><td class='num'>5</td><td class='num'>2,010</td></tr><tr><td><a href='/complaints/ktm/690-smc/'>690 SMC</a></td><td>2019-2025</td><td class='num'>13</td><td class='num'>2</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/lc4-duke/'>LC4 Duke</a></td><td>2015-2017</td><td class='num'>12</td><td class='num'>0</td><td class='num'>4,330</td></tr><tr><td><a href='/complaints/ktm/v-twin-lc8-supermoto/'>V-twin LC8 Supermoto</a></td><td>2006-2013</td><td class='num'>10</td><td class='num'>1</td><td class='num'>3,800</td></tr><tr><td><a href='/complaints/ktm/790-890-adv/'>790/890 Adv</a></td><td>2021-2023</td><td class='num'>8</td><td class='num'>0</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/super-adventure/'>Super Adventure</a></td><td>2015-2023</td><td class='num'>8</td><td class='num'>3</td><td class='num'>2,200</td></tr><tr><td><a href='/complaints/ktm/v-twin-lc8-adventure/'>V-twin LC8 Adventure</a></td><td>2004-2007</td><td class='num'>8</td><td class='num'>2</td><td class='num'>6,477</td></tr><tr><td><a href='/complaints/ktm/390-duke/'>390 Duke</a></td><td>2015-2018</td><td class='num'>7</td><td class='num'>3</td><td class='num'>1,200</td></tr><tr><td><a href='/complaints/ktm/790-adventure-r/'>790 Adventure R</a></td><td>2019</td><td class='num'>7</td><td class='num'>0</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/enduro-two-stroke/'>Enduro Two-Stroke</a></td><td>2006-2007</td><td class='num'>7</td><td class='num'>0</td><td class='num'>100</td></tr><tr><td><a href='/complaints/ktm/690-duke/'>690 Duke</a></td><td>2018</td><td class='num'>6</td><td class='num'>0</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/1190-adventure/'>1190 Adventure</a></td><td>2013-2015</td><td class='num'>5</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/790-890-duke-r/'>790/890 Duke, R</a></td><td>2021-2022</td><td class='num'>5</td><td class='num'>0</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/closed-course-competition/'>Closed Course Competition</a></td><td>2006</td><td class='num'>5</td><td class='num'>0</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/v-twin-rc8-super-duke-r/'>V-twin RC8 Super Duke R</a></td><td>2014-2017</td><td class='num'>4</td><td class='num'>0</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/1090-adventure/'>1090 Adventure</a></td><td>2018-2019</td><td class='num'>3</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/jsd125t-7/'>JSD125T-7</a></td><td>2008</td><td class='num'>3</td><td class='num'>0</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/rc-390/'>RC 390</a></td><td>2015-2024</td><td class='num'>3</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/super-duke-gt/'>Super Duke GT</a></td><td>2016-2017</td><td class='num'>3</td><td class='num'>2</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/v-engine-duke/'>V-Engine Duke</a></td><td>2005-2007</td><td class='num'>3</td><td class='num'>0</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/street-legal-enduro/'>Street Legal Enduro</a></td><td>2022-2024</td><td class='num'>2</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ktm/500-exc/'>500 EXC</a></td><td>2013</td><td class='num'>1</td><td class='num'>1</td><td class='num'>-</td></tr></tbody></table>
+<h2>Models with 1 or 2 complaints</h2><ul class='cols'><li>1090 Adventure R (1)</li><li>250 XCF (1)</li><li>2500 (1)</li><li>300 XC (1)</li><li>525 EXC (2)</li><li>530 EXC R (2)</li><li>790 Duke (1)</li><li>Adventure + Adventure R (2)</li><li>Duke (1)</li><li>Enduro four-stroke/EXC-R (2)</li><li>Gelande Sport (1)</li><li>KLR650 (1)</li><li>Minis (2)</li><li>Racer (1)</li><li>Super Adventure S (1)</li><li>V-twin RC8 Adventure R (2)</li></ul>
+<h2>Other KTM recalls (10)</h2>
+<p>Recalls for models with no matching owner complaints. The model name is as the maker filed it.</p>
+<details class="rc"><summary>390 ADVENTURE X, 390 SMC R · Frame and bodywork: 2025 <span>· 25V907000 · 2025-12-23 · 2,512 bikes</span></summary>
+<p><b>Problem.</b> KTM North America, Inc. (KTM) is recalling certain 2025 390 Adventure R, 390 SMC R, 390 Adventure X, and 390 Enduro R motorcycles. Engine vibrations may cause the side stand spring to break and the side stand to fall to the ground.</p>
+<p><b>Risk.</b> A motorcycle side stand that falls to the ground while riding can shut off the ignition, increasing the risk of a crash or injury.</p>
+<p><b>Fix.</b> Owners are advised to secure the side stand before riding the motorcycle until the remedy has been completed. Dealers will replace the side stand spring and install a new side stand sensor retaining plate, free of charge. Owner notification letters are expected to be mailed on February 17, 2026. Owners may contact KTM customer service at 1-888-985-6090. The manufacturer&#x27;s number for this recall is KTB2514. The information in your report suggests that KTM North America, Inc. (KTM) may have been aware of this issue more than five business days before filing a report with NHTSA. Please be reminded that under Federal law, this agency is to be notified of all safety defect and/or noncompliance decisions within five business days. 49 CFR 573.6. Significant civil penalties can be assessed for this violation.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=25V907000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>390 ADVENTURE X, 390 SMC R · Engine and cooling: 2025 <span>· 25V825000 · 2025-12-01 · 6,546 bikes</span></summary>
+<p><b>Problem.</b> KTM North America, Inc. (KTM) is recalling certain 2024 Husqvarna Vitpilen 401, Husqvarna Svartpilen 401, 2024-2025 390 Duke, 2025 390 SMC R, 390 Enduro R, 390 Adventure X, and 390 Adventure R motorcycles. The engine control software may cause the engine to stall at low rpms, resulting in a loss of power.</p>
+<p><b>Risk.</b> A loss of drive power increases the risk of a crash or injury.</p>
+<p><b>Fix.</b> KTM and Husqvarna dealers will inspect the motorcycles and update the electronic control unit engine management system (ECU EMS) software, free of charge. Owner notification letters were mailed January 23, 2026. Owners may contact KTM customer service at 1-888-985-6090. The manufacturer&#x27;s numbers for this recall are KTB2513 &amp; HTB2508.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=25V825000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>250 DUKE, 990 DUKE · Fuel system: 2024 <span>· 25V740000 · 2025-10-30 · 5,488 bikes</span></summary>
+<p><b>Problem.</b> KTM North America, Inc. is recalling certain 2024 390 Duke, 250 Duke, 990 Duke, Husqvarna Vitpilen 401, and Husqvarna Svartpilen 401 motorcycles. The seal on the fuel filler cap may develop cracks and leak fuel.</p>
+<p><b>Risk.</b> A fuel leak increases the risk of fire or injury.</p>
+<p><b>Fix.</b> Dealers will inspect and replace the fuel cap gasket, free of charge. Owner notification letters were mailed December 15, 2025. Owners may contact KTM customer service at 1-888-985-6090. Vehicle Identification Numbers (VINs) involved in this recall will become searchable on NHTSA.gov March 31, 2026.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=25V740000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>1290 SUPER ADVENTURE R, 250 EXC-F, 450 EXC-F · Tyres: 2019-2020 <span>· 22V588000 · 2022-08-05 · 27,399 bikes</span></summary>
+<p><b>Problem.</b> KTM North America, Inc. (KTM) is recalling certain 2019-2023 Husqvarna and KTM motorcycles with equipped with TKC80 tires. Please refer to KTM&#x27;s recall report for specific model details. Cracks longer than 3/16 inch may develop in the tread grooves. As such, these vehicles fail to comply with the requirements of Federal Motor Vehicle Safety Standard number 119, &quot;New Pneumatic Tires-Other Than Passenger Cars.&quot;</p>
+<p><b>Risk.</b> Cracks in the tread can lead to tread separation, increasing the risk of a crash.</p>
+<p><b>Fix.</b> Dealers will replace the affected tires, free of charge. Owner notification letters were mailed September 16, 2022. Owners may contact KTM&#x27;s customer service at 1-888-985-6090. KTM&#x27;s numbers for this recall are KTB2208 and HTB2207.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=22V588000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>1190 ADVENTURE R · Brakes and ABS: 2013-2016 <span>· 16V854000 · 2016-11-28 · 7,801 bikes</span></summary>
+<p><b>Problem.</b> KTM North America, Inc. (KTM) is recalling certain model year 2015-2016 1290 Super Adventure motorcycles manufactured December 1, 2014, to March 10, 2016, and 2013-2016 1190 Adventure and Adventure R motorcycles manufactured November 20, 2012, to April 25, 2016. In the affected vehicles, the wiring harness can fray and contact the ABS modulator. If the brake line is electrically conductive, the brake line may overheat and melt.</p>
+<p><b>Risk.</b> If the brake line melts, brake failure may result, increasing the risk of a crash.</p>
+<p><b>Fix.</b> KTM will notify owners, and dealers will re-position the wiring harness for the electronic control unit, free of charge. The manufacturer has not yet provided a notification schedule. Owners may contact KTM customer service at 1-888-985-6090.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=16V854000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>450 EXC · Steering: 2011 <span>· 11V300000 · 2011-05-25 · 1,228 bikes</span></summary>
+<p><b>Problem.</b> Ktm is recalling certain model year 2010 and 2011 motorcycles manufactured from november 2009 through november 23, 2010. Due to improper heat treatment, the handlebar clamps can develop cracks, allowing the handlebar to move from its set position.</p>
+<p><b>Risk.</b> Unexpected movement of the handlebar may cause the driver to crash, possibly resulting in injury or death to the rider or others.</p>
+<p><b>Fix.</b> Authorized ktm dealers will replace the defective clamps free of charge. The safety recall began on may 25, 2011. Owners may contact ktm customer service at 1-888-985-6090 for assistance.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=11V300000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>950 SUPERENDURO, 990 ADVENTURE-S · Clutch, gearbox and final drive: 2007 <span>· 07V243000 · 2007-06-05 · 1,092 bikes</span></summary>
+<p><b>Problem.</b> On certain motorcycles, during use the chain slider guard mounting bolts may become loose and possibly fall out. This could result in the possibility of the chain slider guard to become detached.</p>
+<p><b>Risk.</b> Subsequently, the chain slider guard could become caught in the drive chain which may lead to a crash.</p>
+<p><b>Fix.</b> Dealers will inspect the chain slider guard mounting bolts and properly secure them. The recall began on june 8, 2007. Owners may contact ktm at 1-440-985-3553.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=07V243000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>950 ADVENTURE S, 950 SUPERENDURO · Brakes and ABS: 2004-2006 <span>· 07V065000 · 2007-02-23 · 2,684 bikes</span></summary>
+<p><b>Problem.</b> On certain 950 motorcycles, the rear brake may feel spongy or soft when applying the brake. This could lead to improper rear braking.</p>
+<p><b>Risk.</b> Improper rear braking could result in a crash.</p>
+<p><b>Fix.</b> Ktm dealers will replace the rear brake system components. The recall began on march 1, 2007. Owners may contact ktm at 1-440-985-3553.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=07V065000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>LC4 400, LC4 640, LC4 640 ENDURO · Wheels: 2000-2003 <span>· 06V090000 · 2006-03-30 · 1,714 bikes</span></summary>
+<p><b>Problem.</b> On certain motorcycles, the front wheel spokes can become loose and break, causing further damage to adjacent components.</p>
+<p><b>Risk.</b> Such a failure of a front wheel spoke could possibly damage the tire&#x27;s inner tube, increasing the risk of a crash.</p>
+<p><b>Fix.</b> Dealers will install clips to help secure a loose spoke tight to the next crossing spoke. The recall began in april 2006. Owners may contact ktm at 1-440-985-3553.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=06V090000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>LC4 640 ADVENTURE · Wheels: 2001-2003 <span>· 05V526000 · 2005-11-09 · 443 bikes</span></summary>
+<p><b>Problem.</b> On certain motorcycles, premature wear on the front wheel components can occur.</p>
+<p><b>Risk.</b> This condition could result in a crash.</p>
+<p><b>Fix.</b> Dealers will replace the complete front wheel on these motorcycles. The recall began on november 28, 2005. Owners may contact ktm at 1-440-985-3553.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=05V526000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<script>function f(i){var q=i.value.toLowerCase();document.querySelectorAll('#t tbody tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().indexOf(q)>=0?'':'none'})}</script>
+<footer>Complaint and recall data: US National Highway Traffic Safety Administration (NHTSA), downloaded 2026-11-25. Complaints are written by owners, are not verified by NHTSA, and cover the US only. Counts are not adjusted for how many of each bike were sold. · <a href="/complaints/">All makes</a> · <a href="/">Log your bike on Moto Repair Log</a></footer>
+</div>
+</body>
+</html>

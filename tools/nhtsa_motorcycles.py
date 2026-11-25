@@ -60,6 +60,26 @@ NOT_MOTO = re.compile(
     r"MULE|TERYX|PRAIRIE|BAYOU|KFX|GRIZZLY|KODIAK|RHINO|VIKING|WOLVERINE|YFZ|YFM|RAPTOR|BANSHEE|"
     r"BLASTER|KINGQUAD|QUADSPORT|QUADRUNNER|EIGER|OZARK|VINSON|YXZ|CFORCE|UFORCE|ZFORCE|"
     r"SNOWMOBILE|WAVERUNNER|SEA-?DOO|SKI-?DOO|JET ?SKI|GOLF)\b")
+# Car, SUV and motorhome models sold under bike brand names (Honda cars, Suzuki cars, BMW cars,
+# Triumph's old sports cars, Damon motorhomes). Owners sometimes type these on a bike complaint, and
+# recalls for them must never be matched to a motorcycle.
+NOT_BIKE_MODEL = {
+    "Honda": r"ACCORD|CIVIC|CR-?V|HR-?V|PASSPORT|PILOT|ODYSSEY|ELEMENT|FIT|INSIGHT|RIDGELINE|PRELUDE|S2000|CR-?Z|CROSSTOUR|CLARITY|DEL SOL|PROLOGUE",
+    "Suzuki": r"SAMURAI|SIDEKICK|(GRAND )?VITARA|XL-?7|X-90|FORENZA|RENO|VERONA|AERIO|ESTEEM|SWIFT|SX4|KIZASHI|EQUATOR",
+    "BMW": r"[1-8] ?SERIES|[1-8]\d\d[DEI]S?|X[1-7]|Z[348]|M[2-8]|I[3-8]|IX\d?|MINI|ALPINA",
+    "Triumph": r"SPITFIRE|GT6|TR[2-8]|TR250|STAG|HERALD|DOLOMITE|TOLEDO|VITESSE",
+    "Damon": r"(?!HYPER)",  # Damon Motor Coach makes motorhomes; Damon Motors' bikes are all "Hyper..."
+    "Yamaha": r"GOLF ?CAR|DRIVE2?",
+    "Polaris": r"RANGER|GENERAL|RZR|SPORTSMAN|GEM",
+}
+NOT_BIKE_MODEL = {k: re.compile(rf"^\s*({v})\b", re.I) for k, v in NOT_BIKE_MODEL.items()}
+
+
+def not_bike_model(mk, model):
+    rx = NOT_BIKE_MODEL.get(mk)
+    return bool(rx and rx.search(model or ""))
+
+
 MAKE_NAMES = {
     "HARLEY DAVIDSON": "Harley-Davidson", "HARLEY-DAVIDSON": "Harley-Davidson", "BMW": "BMW",
     "KTM": "KTM", "CF MOTO": "CFMoto", "CFMOTO": "CFMoto", "MV AGUSTA": "MV Agusta",
@@ -315,6 +335,8 @@ def main():
         else:
             method = "name"
         mk = make_name(make)
+        if method != "vin" and not_bike_model(mk, model):
+            continue  # e.g. a Honda Accord complaint whose VIN didn't decode
         if d and d[1]:
             vm = d[1].upper()
             if vm == "PIAGGIO AND VESPA":
@@ -397,7 +419,8 @@ def main():
     print("Reading recalls...")
     # Only trust complaints whose typed make agrees with the VIN, so a bike filed as "Dodge" can't pull in car recalls.
     ok = [c for c in complaints.values() if c["make_filed"] == c["make"]]
-    moto_keys = {(c["make"], key(c["model_filed"])) for c in ok} | {(c["make"], key(c["model_family"])) for c in ok}
+    moto_keys = ({(c["make"], key(c["model_filed"])) for c in ok if not not_bike_model(c["make"], c["model_filed"])}
+                 | {(c["make"], key(c["model_family"])) for c in ok})
     moto_makes = {c["make"] for c in ok}
     moto_word = re.compile(r"\b(motorcycles?|motor cycles?|scooters?|trikes?|mopeds?)\b", re.I)
     atv_word = re.compile(r"\b(all-terrain|ATVs?|off-highway|side-by-side|snowmobiles?|watercraft|ROVs?)\b", re.I)
@@ -415,6 +438,8 @@ def main():
                 continue
             if NOT_MOTO.search(model.upper()) and not (make in MOTO_ONLY and "SCRAMBLER" in model.upper()):
                 continue
+            if not_bike_model(mk, model):
+                continue  # car or motorhome recall under a bike brand
             y = f[R["YEAR"]].strip()
             recalls.append(dict(
                 record_id=int(f[R["ID"]]), campaign=f[R["CAMPNO"]].strip(), make=mk,

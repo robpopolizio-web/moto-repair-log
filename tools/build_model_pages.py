@@ -109,6 +109,7 @@ def page(m):
 <p>Keep the limits in mind: {m['owners']} owners is a small sample, people with problems are more likely to answer a question about problems, and most owners did not give the exact mileage when a part failed. Treat this as a list of things to check, not a failure rate.</p>
 <h2>Sources</h2>
 <ul>{sources}</ul>
+<p>See also: <a href="{m['nhtsa']}">every US safety complaint and recall for the {e(m['short'])}</a> (NHTSA data).</p>
 <footer>Moto Repair Log collects owner-reported failures by model. <a href="/">Add your bike</a> · Other reports: {m['other']}</footer>
 </div>
 </body>
@@ -250,8 +251,12 @@ MT09 = dict(
     ],
 )
 
-root = os.path.join(os.path.dirname(__file__), "..", "site")
-for slug, m in [("yamaha-mt-07-reliability", MT07), ("yamaha-mt-09-reliability", MT09)]:
-    d = os.path.join(root, slug); os.makedirs(d, exist_ok=True)
-    open(os.path.join(d, "index.html"), "w").write(page(m))
-    print("wrote", slug)
+MT07["nhtsa"] = "/complaints/yamaha/mt-07/"
+MT09["nhtsa"] = "/complaints/yamaha/mt-09/"
+
+if __name__ == "__main__":
+    root = os.path.join(os.path.dirname(__file__), "..", "site")
+    for slug, m in [("yamaha-mt-07-reliability", MT07), ("yamaha-mt-09-reliability", MT09)]:
+        d = os.path.join(root, slug); os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "index.html"), "w").write(page(m))
+        print("wrote", slug)

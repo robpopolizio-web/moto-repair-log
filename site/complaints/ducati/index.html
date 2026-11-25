@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ducati Motorcycle Problems &amp; Recalls by Model (NHTSA)</title>
+<meta name="description" content="850 US owner complaints and 99 recalls for Ducati motorcycles, by model, from NHTSA data.">
+<link rel="canonical" href="https://motorcycle-reliability-index.pages.dev/complaints/ducati/">
+
+<style>
+:root{--bg:#f5f3ee;--card:#fff;--ink:#1c1c1a;--muted:#6a675f;--line:#e2ded4;--accent:#b8430f;--accent-soft:#fbeee6;--ok:#2e6b3c;--ok-soft:#e6f2e8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:24px 18px 80px}
+nav.crumbs{font-size:.85rem;color:var(--muted);margin-bottom:10px}
+nav.crumbs a{color:var(--muted)}
+h1{font-size:2rem;line-height:1.15;margin:6px 0 10px;letter-spacing:-.01em}
+h2{font-size:1.3rem;margin:34px 0 10px;line-height:1.25}
+h3{font-size:1.05rem;margin:22px 0 6px}
+p{margin:0 0 14px}
+a{color:var(--accent)}
+.lede{font-size:1.08rem;color:#3a3833}
+.meta{font-size:.85rem;color:var(--muted);margin-bottom:18px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 8px;text-align:center}
+.stat b{display:block;font-size:1.6rem;line-height:1.15}
+.stat span{font-size:.78rem;color:var(--muted)}
+.answer{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:16px 18px;margin:8px 0 6px}
+.answer p:last-child{margin:0}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:.93rem;margin:6px 0 8px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#faf8f3;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.n{text-align:center;font-weight:700;white-space:nowrap}
+.issue{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0}
+.issue h3{margin-top:0}
+.tag{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:2px}
+ul{padding-left:20px;margin:0 0 14px}
+li{margin:4px 0}
+.ok{color:var(--ok);font-weight:600}
+.cta{background:var(--ink);color:#fff;border-radius:14px;padding:22px;margin:34px 0}
+.cta h2{margin-top:0;color:#fff}
+.cta a.btn{display:inline-block;background:#fff;color:var(--ink);font-weight:700;padding:11px 18px;border-radius:9px;text-decoration:none;margin-top:4px}
+.note{font-size:.88rem;color:var(--muted)}
+footer{margin-top:40px;font-size:.85rem;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+@media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}h1{font-size:1.6rem}table{font-size:.86rem}th,td{padding:8px}}
+
+.wrap.wide{max-width:960px}
+.bar{display:inline-block;height:8px;border-radius:4px;background:var(--accent);vertical-align:middle;margin-right:6px}
+td.num,th.num{text-align:right;white-space:nowrap}
+details.rc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:10px 0}
+details.rc summary{cursor:pointer;font-weight:600}
+details.rc summary span{font-weight:400;color:var(--muted);font-size:.9rem}
+details.rc p{margin:10px 0 0;font-size:.95rem}
+blockquote{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:12px 0;padding:14px 18px;font-size:.95rem}
+blockquote .who{display:block;font-size:.8rem;color:var(--muted);margin-bottom:6px}
+.filter{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin:6px 0 10px}
+.cols{columns:3 220px;column-gap:24px;padding-left:18px}
+.warn{background:#fff8e6;border:1px solid #f0dca8;border-radius:10px;padding:12px 16px;font-size:.92rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="crumbs"><a href="/">Moto Repair Log</a> › <a href="/complaints/">Complaints</a> › Ducati</nav>
+<h1>Ducati motorcycle problems and recalls</h1>
+<p class="meta">850 US owner complaints across 51 models · 99 recall campaigns · NHTSA data to 2026-11-25</p>
+<p class="warn">These are complaints US owners filed with NHTSA, the US road safety agency. NHTSA does not check them, they are mostly about safety (stalling, brakes, fires, crashes), and popular bikes get more complaints simply because more of them are on the road. Use them to see <b>what goes wrong</b>, not to compare how often.</p>
+<h2>Models</h2>
+<input class="filter" placeholder="Filter models" oninput="f(this)" aria-label="Filter models">
+<table id='t'><thead><tr><th>Model</th><th>Years</th><th class='num'>Complaints</th><th class='num'>Recalls</th><th class='num'>Median miles</th></tr></thead><tbody><tr><td><a href='/complaints/ducati/classic/'>Classic</a></td><td>2005-2009</td><td class='num'>218</td><td class='num'>3</td><td class='num'>3,054</td></tr><tr><td><a href='/complaints/ducati/monster/'>Monster</a></td><td>2004-2020</td><td class='num'>158</td><td class='num'>10</td><td class='num'>5,000</td></tr><tr><td><a href='/complaints/ducati/multistrada-mts/'>Multistrada (MTS)</a></td><td>2003-2018</td><td class='num'>129</td><td class='num'>15</td><td class='num'>5,550</td></tr><tr><td><a href='/complaints/ducati/superbike/'>SuperBike</a></td><td>2004-2021</td><td class='num'>58</td><td class='num'>8</td><td class='num'>4,259</td></tr><tr><td><a href='/complaints/ducati/diavel/'>Diavel</a></td><td>2011-2020</td><td class='num'>30</td><td class='num'>13</td><td class='num'>2,500</td></tr><tr><td><a href='/complaints/ducati/monster-naked-standard-bike/'>MONSTER(NAKED STANDARD BIKE)</a></td><td>2005</td><td class='num'>28</td><td class='num'>2</td><td class='num'>6,100</td></tr><tr><td><a href='/complaints/ducati/multistrada/'>Multistrada</a></td><td>2018-2025</td><td class='num'>20</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/new-superbike-sbk/'>New Superbike (SBK)</a></td><td>2012-2017</td><td class='num'>20</td><td class='num'>11</td><td class='num'>2,800</td></tr><tr><td><a href='/complaints/ducati/panigale-v4/'>Panigale V4</a></td><td>2018-2025</td><td class='num'>19</td><td class='num'>9</td><td class='num'>3,980</td></tr><tr><td><a href='/complaints/ducati/supersport/'>SuperSport</a></td><td>2017-2021</td><td class='num'>18</td><td class='num'>4</td><td class='num'>400</td></tr><tr><td><a href='/complaints/ducati/scrambler-800/'>Scrambler 800</a></td><td>2015-2018</td><td class='num'>16</td><td class='num'>4</td><td class='num'>1,000</td></tr><tr><td><a href='/complaints/ducati/streetfighter-sft/'>Streetfighter (SFT)</a></td><td>2010-2014</td><td class='num'>14</td><td class='num'>4</td><td class='num'>3,200</td></tr><tr><td><a href='/complaints/ducati/hypermotard-hym/'>Hypermotard (HYM)</a></td><td>2008-2015</td><td class='num'>12</td><td class='num'>2</td><td class='num'>3,795</td></tr><tr><td><a href='/complaints/ducati/748/'>748</a></td><td>1997-2001</td><td class='num'>11</td><td class='num'>2</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/m900/'>M900</a></td><td>1992-2000</td><td class='num'>10</td><td class='num'>4</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/hypermotard/'>Hypermotard</a></td><td>2019-2022</td><td class='num'>8</td><td class='num'>5</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/scrambler/'>Scrambler</a></td><td>2018-2022</td><td class='num'>7</td><td class='num'>0</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/749/'>749</a></td><td>2006</td><td class='num'>5</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/m750/'>M750</a></td><td>1987-2000</td><td class='num'>5</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/st2/'>ST2</a></td><td>1998</td><td class='num'>5</td><td class='num'>2</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/900fe-900cr/'>900FE/900CR</a></td><td>1994-1996</td><td class='num'>4</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/996/'>996</a></td><td>1999-2002</td><td class='num'>4</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/999/'>999</a></td><td>2006</td><td class='num'>4</td><td class='num'>2</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/desert-x/'>Desert X</a></td><td>2023</td><td class='num'>3</td><td class='num'>0</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/m900s4/'>M900S4</a></td><td>2001-2002</td><td class='num'>3</td><td class='num'>0</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/916/'>916</a></td><td>1996-1998</td><td class='num'>2</td><td class='num'>7</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/ss900-900-sport/'>SS900/900 SPORT</a></td><td>1999-2001</td><td class='num'>2</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/streetfighter/'>Streetfighter</a></td><td>2021-2022</td><td class='num'>2</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/848-evo/'>848 EVO</a></td><td>2012</td><td class='num'>1</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/999r/'>999R</a></td><td>2005</td><td class='num'>1</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/monster-797/'>Monster 797</a></td><td>2017</td><td class='num'>1</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/panigale-959/'>PANIGALE 959</a></td><td>2018</td><td class='num'>1</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/st3/'>ST3</a></td><td>2006</td><td class='num'>1</td><td class='num'>2</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/st4s/'>ST4S</a></td><td>2003</td><td class='num'>1</td><td class='num'>1</td><td class='num'>-</td></tr><tr><td><a href='/complaints/ducati/sport-touring/'>Sport Touring</a></td><td>2006</td><td class='num'>1</td><td class='num'>1</td><td class='num'>-</td></tr></tbody></table>
+<h2>Models with 1 or 2 complaints</h2><ul class='cols'><li>900SS (1)</li><li>900SSCR/900SSSP (1)</li><li>998 (1)</li><li>Brutale (1)</li><li>D16RR (1)</li><li>Diavel/XDiavel (2)</li><li>Hypersport (1)</li><li>M696 (1)</li><li>MS 1200S (1)</li><li>Monster 1200 (1)</li><li>R 1200 GS (1)</li><li>ST3S-ABS (1)</li><li>ST4 (1)</li><li>SUZUKI MOTORCYCLE (1)</li><li>Super Sport (Faired Sport Bike) (1)</li></ul>
+<p class='note'>Plus 12 complaints where the owner did not say which Ducati model.</p>
+<h2>Other Ducati recalls (30)</h2>
+<p>Recalls for models with no matching owner complaints. The model name is as the maker filed it.</p>
+<details class="rc"><summary>STREETFIGHTER V4, STREETFIGHTER V4 S · Brakes and ABS: 2025-2026 <span>· 26V050000 · 2026-01-28 · 1,440 bikes</span></summary>
+<p><b>Problem.</b> Ducati North America (Ducati) is recalling certain 2025-2026 Streetfighter V4, Streetfighter V4 S, Panigale V4, and Panigale V4 S motorcycles. Excessive heat may damage the rear brake hose between the ABS control unit and brake caliper, resulting in a sudden loss of the rear brakes.</p>
+<p><b>Risk.</b> A sudden loss of rear brake function increases the risk of a crash or injury.</p>
+<p><b>Fix.</b> Dealers will replace the thermal shield, free of charge. Owner notification letters were mailed March 9, 2026. Owners may contact Ducati customer service at 1-888-391-5446. Ducati&#x27;s number for this recall is SRV-RCL-26-001. Vehicle Identification Numbers (VINs) involved in this recall became searchable on NHTSA.gov on February 3, 2026. This recall expands and replaces previous NHTSA recall number 25V013. Vehicles repaired under the previous recall will need to have the new remedy completed.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=26V050000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>STREETFIGHTER V2 · Electrical and instruments: 2025-2026 <span>· 25V838000 · 2025-12-05 · 1,016 bikes</span></summary>
+<p><b>Problem.</b> Ducati North America (Ducati) is recalling certain 2025 Panigale V2 and 2025-2026 Ducati Streetfighter V2 motorcycles. The fuses for the ABS pump and control unit may have been reversed during assembly, which can cause an ABS malfunction and possibly result in wheel lockup.</p>
+<p><b>Risk.</b> Front or rear wheel lockup can cause a loss of motorcycle control, increasing the risk of a crash or injury.</p>
+<p><b>Fix.</b> Dealers will inspect the fuses and fuse holders, and repair them as necessary, free of charge. Owner notification letters were mailed January 30, 2026. Owners may contact Ducati customer service at 1-888-391-5446. Vehicle Identification Numbers (VINs) involved in this recall will be searchable on NHTSA.gov beginning December 15, 2025. Ducati&#x27;s number for this recall is SRV-RCL-25-004.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=25V838000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>PANIGALE V4 R, PANIGALE V4 SL, STREETFIGHTER V2, STREETFIGHTER V4 · Clutch, gearbox and final drive: 2019-2025 <span>· 25V570000 · 2025-09-03 · 10,235 bikes</span></summary>
+<p><b>Problem.</b> Ducati North America (Ducati) is recalling certain 2020-2021 Panigale V4 SL, 2019-2024 Panigale V4 R, 2018-2024 Panigale V4 S, 2023-2025 Streetfighter, 2018-2024 Panigale V4, and 2020-2022 Streetfighter V4 motorcycles. The rear wheel axle could lose its structural integrity and break.</p>
+<p><b>Risk.</b> A rear wheel axle that breaks while riding can result in a loss of motorcycle control, increasing the risk of a crash or injury.</p>
+<p><b>Fix.</b> Dealers will replace the rear wheel axle, free of charge. Owner notification letters were mailed October 16, 2025. Owners may contact Ducati customer service at 1-888-391-5446. The manufacturer&#x27;s number for this recall is SRV-RCL-25-002.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=25V570000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>XDIAVEL STD · Seat: 2016-2023 <span>· 23V820000 · 2023-12-06 · 2,906 bikes</span></summary>
+<p><b>Problem.</b> Ducati North America (Ducati) is recalling certain 2016-2023 XDiavel S and XDiavel STD motorcycles. The passenger backrest may break if it is installed incorrectly or used incorrectly by the passenger.</p>
+<p><b>Risk.</b> A broken passenger backrest may result in the passenger falling off the motorcycle, increasing the risk of injury.</p>
+<p><b>Fix.</b> Dealers will inspect the passenger backrest installation, tighten the screws as necessary, and also apply a warning sticker on the component, free of charge. Owner notification letters were mailed January 19, 2024. Owners may contact Ducati customer service at 1-888-391-5446. Ducati&#x27;s number for this recall is SRV-RCL-23-005.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=23V820000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>HYPERMOTARD 939, HYPERSTRADA 939 · Engine and cooling: 2016-2018 <span>· 22V704000 · 2022-09-20 · 1,586 bikes</span></summary>
+<p><b>Problem.</b> Ducati North America (Ducati) is recalling certain 2016-2018 Hyperstrada 939, Hypermotard 939, and Hypermotard 939 SP motorcycles. The two oil cooler hoses could contact each other and become damaged, which could cause an oil leak.</p>
+<p><b>Risk.</b> An oil leak could drip onto the rear tire, and increase the risk of a crash or injury.</p>
+<p><b>Fix.</b> Dealers will install an oil cooler hose spacer, free of charge. Owner notification letters were mailed October 28, 2022. Owners may contact Ducati customer service at 1-888-391-5446. Ducati&#x27;s number for this recall is SRV-RCL-22-002.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=22V704000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>STREETFIGHTER V4, STREETFIGHTER V4 S · Engine and cooling: 2021 <span>· 20V460000 · 2020-08-06 · 156 bikes</span></summary>
+<p><b>Problem.</b> Ducati North America (Ducati) is recalling certain 2021 Streetfighter V4 and Streetfighter V4 S motorcycles. The generator rotor (flywheel) may break, damaging the generator cover and causing oil leakage from the engine.</p>
+<p><b>Risk.</b> Leaking oil may drip into the path of the rear tire, increasing the risk of a crash.</p>
+<p><b>Fix.</b> All affected vehicles are still in dealer inventory. Dealers will inspect the production dates on the generator rotors (flywheels) and replace them, as necessary. The recall began August 12, 2020. Owners may contact Ducati customer service at 1-888-391-5446. Ducati&#x27;s number for this recall is SRV-RCL-20-002.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=20V460000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>1299 SUPERLEGGERA · Brakes and ABS: 2017 <span>· 20V232000 · 2020-04-23 · 97 bikes</span></summary>
+<p><b>Problem.</b> Ducati North America (Ducati) is recalling certain 2017 Superleggera motorcycles. The front brake pads may corrode, potentially causing the front brake pads friction material to detach from the backing plate.</p>
+<p><b>Risk.</b> If the front brake pads friction material detaches from the backing plate occurs, the motorcycle may experience increased stopping distance, increasing the risk of a crash.</p>
+<p><b>Fix.</b> Ducati will notify owners, and dealers will replace the front brake pads, free of charge. The recall began June 1, 2020. Owners may contact Ducati customer service at 1-888-391-5446. Ducati&#x27;s number for this recall is SRV-RCL-20-001.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=20V232000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>1199 · Engine and cooling: 2014-2018 <span>· 19V675000 · 2019-09-20 · 651 bikes</span></summary>
+<p><b>Problem.</b> Ducati North America (Ducati) is recalling certain 2014-2018 1199 SL, Panigale R (V2), 1299 SL, and 1299 FE motorcycles. Engine crankcase pressure can push engine oil into the airbox, possibly resulting in oil leaking from the airbox drain hose.</p>
+<p><b>Risk.</b> The leaking oil may drip in the path of the rear tire, increasing the risk of a crash.</p>
+<p><b>Fix.</b> Ducati will notify owners, and dealers will install a blow-by valve kit, free of charge. The recall began October 29, 2019. Owners may contact Ducati customer service at 1-888-391-5446. Ducati&#x27;s number for this recall is SRV-RCL-19-002.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=19V675000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>PANIGALE SPECIALE · Fuel system: 2017-2019 <span>· 19V382000 · 2019-05-20 · 1,880 bikes</span></summary>
+<p><b>Problem.</b> Ducati North America (Ducati) is recalling certain 2018-2019 Panigale V4, Panigale V4 S, Panigale Speciale, and 2019 Panigale R motorcycles. Excessive pressure in the fuel tank may cause fuel to spray when opening the fuel cap.</p>
+<p><b>Risk.</b> Fuel spray can increase the risk of injury and a fuel leak in the presence of an ignition source can increase the risk of a fire.</p>
+<p><b>Fix.</b> Ducati will notify owners, and dealers will update the fuel cap venting system, provide an updated page for the owner&#x27;s manual, and affix a warning label decal to the fuel tank, free of charge. The recall began July 9, 2019. Owners may contact Ducati customer service at 1-888-391-5446. Ducati&#x27;s number for this recall is SRV-RCL-19-001. Note: This recall includes motorcycles that may have been previously remedied under recall 18V-238 for a similar issue.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=19V382000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>PANIGALE 1299 FE · Brakes and ABS: 2018 <span>· 18V480000 · 2018-07-19 · 72 bikes</span></summary>
+<p><b>Problem.</b> Ducati North America (Ducati) is recalling certain 2018 Ducati Panigale V4, Panigale 959, Panigale 1299 FE, and Hypermotard motorcycles. The friction material on the rear brake pads may detach from the backing plate.</p>
+<p><b>Risk.</b> If the rear brake pad friction material detaches, it may lengthen the distance needed to stop the motorcycle, increasing the risk of a crash.</p>
+<p><b>Fix.</b> Ducati will notify owners, and dealers will inspect the rear brake pads. Brake pads from the affected batch will be replaced, free of charge. The recall began August 27, 2018. Owners may contact Ducati customer service at 1-888-391-5446.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=18V480000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>1199 SUPERLEGGERA · Clutch, gearbox and final drive: 2014 <span>· 16V339000 · 2016-05-23 · 168 bikes</span></summary>
+<p><b>Problem.</b> Ducati North America (Ducati) is recalling certain model year 2014 1199 Superleggera motorcycles manufactured April 8, 2014, through November 13, 2014. On the affected motorcycles, the damper plate assembled between the primary driven gear and the clutch basket assembly could break due to fatigue, and result in the engine seizing, and therefore, the rear wheel locking up.</p>
+<p><b>Risk.</b> A rear wheel lock up may cause a loss of control and increase the risk of a crash.</p>
+<p><b>Fix.</b> Ducati will notify owners, and dealers will install a new clutch assembly, free of charge. The recall began on July 11, 2016. Owners may contact Ducati customer service at 1-800-231-6696. Ducati&#x27;s number for this recall is SRV-RCL-16-002.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=16V339000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>1199 SUPERLEGGERA · Suspension: 2014 <span>· 15V268000 · 2015-05-08 · 549 bikes</span></summary>
+<p><b>Problem.</b> Ducati North America (Ducati) is recalling certain model year 2014 1199 Panigale S version, 1199 Superleggera and 1199 Panigale R version motorcycles. The affected motorcycles may have been built with an improperly manufactured rear shock absorber. The nut on the damper rod for these shock absorbers may loosen, resulting in a loss of damping and the possible disassembling of the shock.</p>
+<p><b>Risk.</b> If the damper rod nut loosens, shock absorber performance would be affected, possibly causing a loss of vehicle control and increasing the risk of a crash.</p>
+<p><b>Fix.</b> Ducati will notify owners, and dealers will either replace the rear shock assembly or send the shock to the supplier&#x27;s repair center to be remedied, free of charge. The recall began on June 29, 2015. Owners may contact Ducati customer service at 1-800-231-6696. Ducati&#x27;s number for this recall is RCL-15-002.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=15V268000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>MONSTER 796 · Brakes and ABS: 2012 <span>· 12V188000 · 2012-05-01 · 283 bikes</span></summary>
+<p><b>Problem.</b> Ducati is recalling certain model year 2012 848, streetfighter, hypermotard, multistrada, and monster motorcycles. The friction material may detach from the backing plate of the rear brake pads.</p>
+<p><b>Risk.</b> If the friction material detaches, there would be a sudden loss of rear brake efficiency, increasing the stopping distance and increasing the risk of a crash.</p>
+<p><b>Fix.</b> Ducati will notify owners, and dealers will inspect and replace, as necessary, the rear brake pads free of charge. The safety recall began on may 21, 2012. Owners may contact ducati at 1-800-231-6696 or go to their website at www.ducati.com.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=12V188000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>HYPERMOTARD 1100 EVO, HYPERMOTARD 1100 EVO SP, HYPERMOTARD1100EVO SP C, MONSTER 796 · Fuel system: 2011-2012 <span>· 12V053000 · 2012-02-14 · 913 bikes</span></summary>
+<p><b>Problem.</b> Ducati is recalling certain model year 2011-2012 hypermotard and monster motorcycles manufactured from june 25, 2011, through november 30, 2011. The fuel lines contain micro-cracking due to insufficient drying of raw materials prior to extrusion.</p>
+<p><b>Risk.</b> This could cause a fuel leak, which in the presence of an ignition source, may lead to a fire and increased risk of property damage or personal injury.</p>
+<p><b>Fix.</b> Ducati will notify owners, and dealers will replace the fuel lines free of charge. The safety recall began on march 1, 2012. Owners may contact ducati at 1-800-231-6696 or go to their website at www.ducati.com.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=12V053000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>MTS 1100, MTS1100 · Fuel system: 2007-2009 <span>· 11V020000 · 2011-01-24 · 3,911 bikes</span></summary>
+<p><b>Problem.</b> Ducati is recalling certain model year 2006 multistrada 620, model year 2003-2006, multistrada 1000, and model year 2007-2009, multistrada 1100 motorcycles. Fuel leakage can occur at the fuel tank pump flange seal.</p>
+<p><b>Risk.</b> Fuel leakage, in the presence of an ignition source, could result in a fire.</p>
+<p><b>Fix.</b> Dealers will replace the fuel pump o-ring with an updated part free of charge. The manufacturer has not yet provided an owner notification schedule. Owners may contact ducati at 800-231-6696.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=11V020000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>DESMOSEDICI RR · Frame and bodywork: 2008 <span>· 09V370000 · 2009-09-24 · 386 bikes</span></summary>
+<p><b>Problem.</b> Ducati is recalling certain model year 2008 desmosedici rr motorcycles. Due to insufficient distance between the tail guard and the exhaust system, the tail guard could overheat.</p>
+<p><b>Risk.</b> Overheating of the tail guard could create a potential fire hazard.</p>
+<p><b>Fix.</b> Ducati will notify owners and dealers will repair the motorcycles free of charge. The safety recall began on october 19, 2009. Owners may contact ducati toll-free at 1-800-231-6696.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=09V370000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>F1098S · Frame and bodywork: 2009 <span>· 09V197000 · 2009-06-01 · 732 bikes</span></summary>
+<p><b>Problem.</b> Ducati is recalling 732 model year 2009 1198 s, 1098 r, and f1098 s streetfighter motorcycles. The right fork may have possible cracking a deformation at the right-hand side fork bottom wheel axle pinch bolt area.</p>
+<p><b>Risk.</b> Cracking of the fork may lead to a loss of steering control, possibly resulting in a crash.</p>
+<p><b>Fix.</b> Ducati will notify owners and repair the affected motorcycles free of charge. The safety recall began on june 16, 2009. Owners may contact ducati toll-free at 1-800-231-6696.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=09V197000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>DESMOSEDICI RR · Electrical and instruments: 2008 <span>· 09V160000 · 2009-05-15 · 396 bikes</span></summary>
+<p><b>Problem.</b> Ducati is recalling 396 my 2008 desmosedici rr motorcycles. The main wiring harness may be routed incorrectly which could possibly result in damage to the motorcycle and a potential hazard to the rider.</p>
+<p><b>Risk.</b> Any damage to the harness may lead to loss of functionality of the motorcycle system or an unexpected loss of engine performance, and thereby increasing the risk of a crash.</p>
+<p><b>Fix.</b> Dealers will check, reposition and fasten the main wiring harness to the frame free of charge. The safety recall began on june 1, 2009. To locate your nearest authorized ducati dealer, you may go to www.ducatiusa.com and select the &quot;dealer locator&quot; or you may call toll free at 1-800-231-6696.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=09V160000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>1098 TRICOLORE · Electrical and instruments: 2007-2008 <span>· 08V638000 · 2008-12-03 · 7,130 bikes</span></summary>
+<p><b>Problem.</b> Ducati is recalling 7,130 my 2007-2008 1098, 1098s, 1098 tricolore, 1098r, and my 2008-2009 848 motorcycles. The motorcycle charging system may be adversely affected by engine heat and stop operating. This results in damage to the voltage regulator and ensuing battery discharge.</p>
+<p><b>Risk.</b> This can result in damage to the motorcycle and a potential hazard to the rider, increasing the risk of a crash.</p>
+<p><b>Fix.</b> Dealers will replace the voltage regulator, install a heat guard between the voltage regulator and the engine exhaust system, and install a modified battery support. The recall will begin on december 24, 2008. Owners may contact ducati at 1-800-231-6696.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=08V638000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>DESMOSEDICI · Fuel system: 2008 <span>· 08V563000 · 2008-10-23 · 226 bikes</span></summary>
+<p><b>Problem.</b> Ducati is recalling 289 my 2008 desmosedici rr motorcycles. The fuel tank drain and breather hose clamps may be installed incorrectly.</p>
+<p><b>Risk.</b> This nonconformity may cause the fuel lines to weaken and break. This can result in damage to the motorcycle and a potential hazard to the rider.</p>
+<p><b>Fix.</b> Dealers will replace the fuel filler drain hose, the fuel breather hose, and the hose clamps will be replaced and repositioned free of charge. The recall began on october 22, 2008. Owners may contact ducati at 1-800-231-6696.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=08V563000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>1098 TRICOLORE · Clutch, gearbox and final drive: 2007-2008 <span>· 08V253000 · 2008-06-05 · 3,614 bikes</span></summary>
+<p><b>Problem.</b> Ducati is recalling 3,614 my 2007-2008 1098, 1098s, and 1098 tricolore motorcycles. The rear drive sprocket can fail.</p>
+<p><b>Risk.</b> If the sprocket were to fail while the motorcycle is being driven, it is possible that the motorcycle will experience a sudden loss of power and/or the chain may become entangled with the chassis. This can result in a crash without prior warning.</p>
+<p><b>Fix.</b> Dealers will replace the rear drive sprocket. The recall began on june 25, 2008. Owners may contact ducati at 1-408-253-0499.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=08V253000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>1098 TRICOLORE · Engine and cooling: 2007 <span>· 07V175000 · 2007-04-24 · 119 bikes</span></summary>
+<p><b>Problem.</b> On certain motorcycles, the horizontal cylinder head fitting to the thermostat produced a coolant leakage.</p>
+<p><b>Risk.</b> Coolant leakage over the rear suspension and wheel could cause a crash.</p>
+<p><b>Fix.</b> The thermostat hose and relative couplings were replaced. All motorcycles were corrected before retail delivery to customers.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=07V175000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>1098 TRICOLORE · Engine and cooling: 2007 <span>· 07V176000 · 2007-04-24 · 2 bikes</span></summary>
+<p><b>Problem.</b> On certain motorcycles, the horizontal and vertical cylinders mobile timing belt tensioner is dimensionally incorrect.</p>
+<p><b>Risk.</b> The mobile tensioner can come into contact with the timing belt cover which could cause the timing belt to fail and consequently stop the engine increasing the risk of a crash.</p>
+<p><b>Fix.</b> Dealers will replace the existing mobile timing belt tensioner using updated components. The recallbegan on april 4, 2007. Owners may contact ducati at 1-408-253-0499.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=07V176000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>749S · Brakes and ABS: 2003 <span>· 04V585000 · 2004-12-08 · 993 bikes</span></summary>
+<p><b>Problem.</b> On certain motorcycles, the front brake hose can become trapped between the lower steering flange and the steering lock peg when the vehicle is cornering.</p>
+<p><b>Risk.</b> This condition could cause a loss of front brake fluid pressure and damage to the brake hose, which could rupture causing front brake failure. This could result in a crash.</p>
+<p><b>Fix.</b> Dealers will install a retaining clip on the front brake hose. The recall is expected to begin during december 2004. Owners should contact ducati at 1-408-253-0499.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=04V585000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>749S, 999R FILA · Engine and cooling: 2003-2004 <span>· 04V340000 · 2004-07-08 · 1,800 bikes</span></summary>
+<p><b>Problem.</b> Certain motorcycles, a significant quantity of oil lubricant can leak on to the rear wheel and tire from the oil cooler.</p>
+<p><b>Risk.</b> Oil leakage can cause dangerous riding conditions which could lead to injury or a crash.</p>
+<p><b>Fix.</b> Dealers will inspect the oil cooler and replace it if necessary. The recall began on december 5, 2004. Owners should contact ducati at 408-343-4411.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=04V340000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>DUCATI · Clutch, gearbox and final drive: 2001 <span>· 02V114000 · 2002-04-15 · 7,086 bikes</span></summary>
+<p><b>Problem.</b> On certain motorcycles, it is possible that the clutch slave cylinder may leak internally causing the clutch control to jam.</p>
+<p><b>Risk.</b> This could affect the control of the motorcycle and cause a crash.</p>
+<p><b>Fix.</b> Dealers will replace the clutch slave cylinder. Owner notification is expected to begin during april 2002. Owners who take their vehicles to an authorized dealer on an agreed upon service date and do not receive the free remedy within a reasonable time should contact ducati at 1-973-839-2600.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=02V114000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>748BIP, 748L, 748MONO, 916BIP, 916MONO, 955SP, 996SPS · Wheels: 1996-1999 <span>· 99V360000 · 1999-12-23 · 4,165 bikes</span></summary>
+<p><b>Problem.</b> Vehicle description: motorcycles equipped with a rear wheel hub spindle. Internal cracks may be present on the rear wheel spindle.</p>
+<p><b>Risk.</b> This condition could cause the spindle to fail affecting the control of the motorcycle, and could result in a crash.</p>
+<p><b>Fix.</b> Dealers will inspect the rear wheel spindle and replace if necessary.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=99V360000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>916SPS · Fuel system: 1998 <span>· 99V048000 · 1999-03-11 · 793 bikes</span></summary>
+<p><b>Problem.</b> Vehicle description: motorcycles. The fuel lines inside the fuel tank can leak.</p>
+<p><b>Risk.</b> Fuel leakage in the presence of an ignition source can result in a fire.</p>
+<p><b>Fix.</b> Dealers will replace this fuel line.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=99V048000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>900FE · Brakes and ABS: 1998 <span>· 98V154000 · 1998-07-09 · 300 bikes</span></summary>
+<p><b>Problem.</b> Vehicle description: motorcycles. The rear brake reaction rod nut and bolt will need to be replaced.</p>
+<p><b>Risk.</b> This condition can cause increased braking effort.</p>
+<p><b>Fix.</b> Dealers will replace the rear brake reaction rod nut and bolt with a new modified nut and bolt.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=98V154000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<details class="rc"><summary>900SL · Brakes and ABS: 1993 <span>· 97V222000 · 1997-12-08 · 2,380 bikes</span></summary>
+<p><b>Problem.</b> Vehicle description: motorcycles. The rear brake reaction rod nut and bolt will need to be replaced.</p>
+<p><b>Risk.</b> This condition can cause increased braking effort.</p>
+<p><b>Fix.</b> Dealers will replace the rear brake reaction rod nut and bolt with a new modified nut and bolt.</p>
+<p><a href="https://www.nhtsa.gov/recalls?nhtsaId=97V222000" rel="nofollow noopener" target="_blank">Check if your VIN is affected on nhtsa.gov</a></p></details>
+<script>function f(i){var q=i.value.toLowerCase();document.querySelectorAll('#t tbody tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().indexOf(q)>=0?'':'none'})}</script>
+<footer>Complaint and recall data: US National Highway Traffic Safety Administration (NHTSA), downloaded 2026-11-25. Complaints are written by owners, are not verified by NHTSA, and cover the US only. Counts are not adjusted for how many of each bike were sold. · <a href="/complaints/">All makes</a> · <a href="/">Log your bike on Moto Repair Log</a></footer>
+</div>
+</body>
+</html>
