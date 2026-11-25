@@ -86,7 +86,6 @@ def page(m):
   <div class="stat"><b>{m['clean']}</b><span>nothing failed</span></div>
   <div class="stat"><b>{e(m['top_mileage'])}</b><span>highest mileage reported</span></div>
 </div>
-<h2>The short answer</h2>
 <div class="answer">{''.join(f'<p>{p}</p>' for p in m['answer'])}</div>
 <h2>Most reported problems</h2>
 <table><thead><tr><th>Problem</th><th>Owners</th><th>When it showed up</th></tr></thead><tbody>{rows}</tbody></table>

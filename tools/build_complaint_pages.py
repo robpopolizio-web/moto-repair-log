@@ -39,48 +39,38 @@ details.rc ul.docs li{margin:3px 0}
 .warn{background:#fff8e6;border:1px solid #f0dca8;border-radius:10px;padding:12px 16px;font-size:.92rem}
 """
 
-# NHTSA's component codes, grouped into plain English. First match wins.
-GROUPS = [
-    ("Engine and cooling", ("Engine",)),
-    ("Clutch, gearbox and final drive", ("Power Train",)),
-    ("Fuel system", ("Fuel", "Hybrid")),
-    ("Brakes and ABS", ("Service Brakes", "Parking Brake")),
-    ("Throttle and cruise control", ("Vehicle Speed Control",)),
-    ("Lights", ("Exterior Lighting", "Interior Lighting")),
-    ("Electrical and instruments", ("Electrical System",)),
-    ("Suspension", ("Suspension",)),
-    ("Steering", ("Steering",)),
-    ("Frame and bodywork", ("Structure", "Latches")),
-    ("Wheels", ("Wheels",)),
-    ("Tyres", ("Tires",)),
-    ("Rider aids (traction, stability)", ("Electronic Stability", "Traction Control", "Forward Collision", "Lane Departure", "Back Over")),
-    ("Airbag", ("Air Bags",)),
-    ("Seat", ("Seats", "Seat Belts")),
-    ("Mirrors and windscreen", ("Visibility",)),
-    ("Accessories and equipment", ("Equipment", "Child Seat", "Tether")),
-]
-OTHER = "Other or not stated"
-
-
-def group_of(component):
-    for name, prefixes in GROUPS:
-        if any(component.startswith(p) for p in prefixes):
-            return name
-    return OTHER
+# one part vocabulary for the whole site: see tools/parts.py
+from parts import OTHER, VAGUE, category as group_of, part_name
 
 
 def part_of(component):
-    """Most specific readable part name, e.g. 'Power Train:Manual Transmission' -> 'Manual transmission'."""
-    bits = [b.strip() for b in component.split(":") if b.strip()]
-    if len(bits) < 2:
-        return None
-    last = bits[-1]
-    if last.lower() in ("gasoline", "diesel", "front", "rear", "other", "unknown or other"):
-        last = " ".join(bits[-2:]) if len(bits) > 2 else bits[-1] + " " + bits[0].lower()
-        last = {"Engine Gasoline": "Engine", "Suspension rear": "Rear suspension", "Suspension front": "Front suspension"}.get(last, last)
-    if last == "Rear":
-        last = "Rear suspension"
-    return last[:1].upper() + last[1:].lower().replace("abs", "ABS").replace("12v/24v/48v", "12V")
+    """Specific part name, or None when the code only names a broad area."""
+    p = part_name(component)
+    return None if p in VAGUE else p
+
+
+def low(cat):
+    """Category name inside a sentence: 'Brakes & ABS' -> 'brakes and ABS'."""
+    return cat.lower().replace("&", "and").replace("abs", "ABS")
+
+
+def sentence(t):
+    """'Fuel Leak May Occur At The Fuel Line Clamp' -> 'Fuel leak may occur at the fuel line clamp'. Keeps ABS, ECU, 12V."""
+    words = t.strip().split()
+    out = []
+    for i, w in enumerate(words):
+        bits = []
+        for j, b in enumerate(w.split("/")):
+            keep = (len(b) > 1 and b.isupper()) or any(ch.isdigit() for ch in b)
+            bits.append(b if keep else (b.capitalize() if i == 0 and j == 0 else b.lower()))
+        out.append("/".join(bits))
+    return " ".join(out)
+
+
+def nice_date(iso):
+    import datetime
+    d = datetime.date.fromisoformat(iso[:10])
+    return f"{d.day} {d.strftime('%B %Y')}"
 
 
 def e(s):
@@ -147,7 +137,7 @@ def page(title, desc, crumbs, body, canonical, ld=None, wide=False):
 <div class="wrap{' wide' if wide else ''}">
 <nav class="crumbs">{crumb_html}</nav>
 {body}
-<footer>Complaint and recall data: US National Highway Traffic Safety Administration (NHTSA), downloaded {e(BUILT[:10])}. Complaints are written by owners, are not verified by NHTSA, and cover the US only. Counts are not adjusted for how many of each bike were sold. · <a href="/complaints/">All makes</a> · <a href="/">Log your bike on Moto Repair Log</a></footer>
+<footer>Complaint and recall data: US National Highway Traffic Safety Administration (NHTSA), last updated {e(nice_date(BUILT))}. Complaints are written by owners, are not verified by NHTSA, and cover the US only. Counts are not adjusted for how many of each bike were sold. · <a href="/complaints/">All makes</a> · <a href="/">Log your bike on Moto Repair Log</a></footer>
 </div>
 </body>
 </html>
@@ -309,10 +299,15 @@ def recall_html(camps):
         ys = years_label([x["year"] for x in rows])
         date = (r["report_date"] or "")[:10]
         units = f" · {fmt(r['units_affected'])} bikes" if r["units_affected"] else ""
-        comp = group_of(r["component"] or "") if r["component"] else OTHER
+        codes = sorted({c.strip() for x in rows for c in (x["component"] or "").split("|") if c.strip()})
+        names = list(dict.fromkeys(part_name(c) for c in codes)) or ["Other"]
+        names = names[:1] + [x if x[:2].isupper() else x[:1].lower() + x[1:] for x in names[1:]]
+        what = " and ".join(names[:2]) + (" and more" if len(names) > 2 else "")
         flags = " · <b>Do not ride until fixed</b>" if any(x["do_not_drive"] for x in rows) else ""
         subj = (details.get(camp) or {}).get("subject")
-        title = f"{e(subj)} ({e(comp.lower())})" if subj else e(comp)
+        if subj and (subj.isupper() or ":" in subj):   # pre-2012 subjects are NHTSA codes, not sentences
+            subj = None
+        title = f"{e(what)}: {e(sentence(subj))}" if subj else e(what)
         out.append(f"""<details class="rc"><summary>{title}: {e(ys)} <span>· {e(camp)} · {e(date)}{units}{flags}</span></summary>
 <p><b>Problem.</b> {e(tidy(r['defect']))}</p>
 <p><b>Risk.</b> {e(tidy(r['consequence']))}</p>
@@ -354,7 +349,7 @@ for m in models:
 
     # short answer
     if n:
-        shares = ", ".join(f"<b>{e(g.lower())}</b> ({round(100 * gcount[g] / n)}%)" for g in top)
+        shares = ", ".join(f"<b>{e(low(g))}</b> ({round(100 * gcount[g] / n)}%)" for g in top)
         answer = f"<p>{fmt(n)} US owners have filed a safety complaint about the {e(make)} {e(fam)}"
         answer += f" (model years {e(years_label(ys))})." if ys else "."
         if top:
@@ -368,14 +363,14 @@ for m in models:
         answer += f"<p>The bike has had <b>{len(camps)} safety recall{'s' if len(camps) != 1 else ''}</b>. Recall work is free at any {e(make)} dealer, so check your VIN (link under each recall below).</p>"
 
     body = [f"<h1>{e(make)} {e(fam)} problems: {fmt(n)} owner complaint{'s' if n != 1 else ''} and {len(camps)} recall{'s' if len(camps) != 1 else ''}</h1>",
-            f'<p class="meta">US safety complaints and recalls from NHTSA · data to {e(BUILT[:10])}</p>',
+            f'<p class="meta">Updated {e(nice_date(BUILT))} · US safety complaints and recalls from NHTSA</p>',
             '<div class="stats">',
             f'<div class="stat"><b>{fmt(n)}</b><span>complaints</span></div>',
             f'<div class="stat"><b>{len(camps)}</b><span>recalls</span></div>',
             f'<div class="stat"><b>{fmt(med) + " mi" if med else "n/a"}</b><span>median mileage at complaint</span></div>',
             f'<div class="stat"><b>{crashes}</b><span>said it led to a crash</span></div>',
             "</div>",
-            "<h2>The short answer</h2>", f'<div class="answer">{answer}</div>']
+            f'<div class="answer">{answer}</div>']
     if key in REPORTS:
         body.append(f'<p>We also have a <a href="{REPORTS[key]}">hand-checked report from {e(fam)} owners</a> covering non-safety failures and mileages worldwide.</p>')
 
@@ -430,7 +425,7 @@ for m in models:
 
     title = f"{make} {fam} Problems: {fmt(n)} Complaints, {len(camps)} Recalls (NHTSA)"
     desc = (f"{fmt(n)} US owner complaints and {len(camps)} recalls for the {make} {fam}"
-            + (f". Most reported: {', '.join(g.lower() for g in top)}." if top else ".")
+            + (f". Most reported: {', '.join(low(g) for g in top)}." if top else ".")
             + (f" Median {fmt(med)} miles." if med else ""))
     ld = {"@context": "https://schema.org", "@type": "Dataset", "name": f"{make} {fam} NHTSA complaints and recalls",
           "description": desc, "creator": {"@type": "Organization", "name": "NHTSA"},
@@ -464,7 +459,7 @@ for make in all_makes:
                     f"<td class='num'>{fmt(x['complaints'])}</td><td class='num'>{x['recall_campaigns'] or 0}</td>"
                     f"<td class='num'>{fmt(x['median_miles']) if x['median_miles'] and x['with_mileage'] >= 5 else '-'}</td></tr>")
     body = [f"<h1>{e(make)} motorcycle problems and recalls</h1>",
-            f'<p class="meta">{fmt(total)} US owner complaints across {len(ms)} models · {ncamp} recall campaigns · NHTSA data to {e(BUILT[:10])}</p>',
+            f'<p class="meta">{fmt(total)} US owner complaints across {len(ms)} models · {ncamp} recall campaigns · Updated {e(nice_date(BUILT))}</p>',
             caveat()]
     if rows:
         body += ["<h2>Models</h2>", '<input class="filter" placeholder="Filter models" oninput="f(this)" aria-label="Filter models">',
@@ -505,7 +500,7 @@ allrows = "".join(
 gtot = Counter(g for cs in complaints.values() for c in cs for g in c["groups"])
 grows = "".join(f"<tr><td>{e(g)}</td><td class='num'>{fmt(v)}</td><td class='num'>{round(100 * v / tot_c)}%</td></tr>" for g, v in gtot.most_common())
 body = f"""<h1>Motorcycle complaints and recalls, by make and model</h1>
-<p class="meta">{fmt(tot_c)} US owner complaints · {fmt(tot_r)} recall campaigns · {len(paged)} model pages · NHTSA data to {e(BUILT[:10])}</p>
+<p class="meta">{fmt(tot_c)} US owner complaints · {fmt(tot_r)} recall campaigns · {len(paged)} model pages · Updated {e(nice_date(BUILT))}</p>
 <p class="lede">Every motorcycle safety complaint and recall in the US government's NHTSA database, sorted by bike. Find your model to see what owners report going wrong, at what mileage, and whether there is a recall you should get done for free.</p>
 {caveat()}
 <h2>Find your bike</h2>
