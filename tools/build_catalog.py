@@ -298,14 +298,7 @@ def main():
             if not done:
                 out.execute("insert into unassigned values (?,?,?,?,?,?)", ("EU Safety Gate", brand, name, None, f"alert {case}", 1))
 
-    # ---- UK DVSA recalls (file downloaded by hand)
-    if os.path.exists(DVSA):
-        for r in csv.DictReader(open(DVSA, encoding="utf-8", errors="replace")):
-            mk, model, camp = r.get("Make", ""), r.get("Model") or r.get("Recalls Model Information", ""), r.get("Recalls Number", "")
-            key, rule = find(mk, model)
-            if key:
-                bikes[key]["rec"].append(("DVSA", "UK", camp, model, rule))
-                bikes[key]["aliases"].append(("DVSA", mk, model, None, rule))
+    # UK DVSA recalls come in through world_recalls (tools/world_sources.py)
 
     # ---- write
     bid = 0

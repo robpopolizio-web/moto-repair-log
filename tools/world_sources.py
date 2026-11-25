@@ -21,6 +21,7 @@ DB = os.path.join(ROOT, "data", "nhtsa", "motorcycles.sqlite")
 CANADA = os.path.join(ROOT, "data", "canada", "vrdb_full_monthly.csv")
 MLIT = os.path.join(ROOT, "data", "mlit", "mlit.sqlite")
 VEH0120 = os.path.join(ROOT, "data", "dvla", "df_VEH0120_GB.csv")
+DVSA = os.path.join(ROOT, "data", "dvsa_recalls", "RecallsFile.csv")   # downloaded by hand (bot-protected site)
 
 MAKE_ALIASES = {
     "INDIAN MOTORCYCLE": "INDIAN", "INDIAN MOTORCYCLE COMPANY": "INDIAN", "HARLEY DAVIDSON": "HARLEY-DAVIDSON",
@@ -44,6 +45,9 @@ def tok(s):
 
 def make_key(m):
     m = " ".join(tok(m)).replace("HARLEY DAVIDSON", "HARLEY-DAVIDSON").replace("CAN AM", "CAN-AM")
+    # UK importer names: "SUZUKI GB PLC", "BMW MOTORRAD UK", "MV AGUSTA MOTOR SPA", "BRP CAN-AM 1"
+    m = re.sub(r"( (GB|UK|PLC|LTD|LIMITED|SPA|S P A|GMBH|AG|CO|COMPANY|MOTOR|MOTORS|MOTORCYCLES?|MOTORRAD|EUROPE|NV|BV|\d))+$", "", m)
+    m = re.sub(r"^BRP ", "", m)
     return MAKE_ALIASES.get(m, m)
 
 
@@ -92,7 +96,7 @@ def main():
     drop table if exists world_recalls; drop table if exists world_recall_models;
     drop table if exists uk_fleet; drop table if exists uk_fleet_models; drop table if exists investigation_models;
     create table world_recalls (source TEXT, country TEXT, campaign TEXT, date TEXT, make TEXT, model TEXT, year INT,
-      system TEXT, description TEXT, units INT, url TEXT);
+      system TEXT, description TEXT, units INT, url TEXT, remedy TEXT, mfr_ref TEXT, build_start TEXT, build_end TEXT);
     create table world_recall_models (source TEXT, campaign TEXT, make TEXT, model_family TEXT, foreign_model TEXT, year INT);
     create table uk_fleet (make TEXT, gen_model TEXT, model TEXT, fuel TEXT, licensed INT, sorn INT, quarter TEXT);
     create table uk_fleet_models (make TEXT, model_family TEXT, licensed INT, sorn INT, quarter TEXT);
@@ -107,7 +111,7 @@ def main():
         n += 1
         camp, yr = r["RECALL_NUMBER_NUM"], int(float(r["YEAR"])) if r["YEAR"] else None
         units = int(float(r["UNIT_AFFECTED_NBR"])) if r["UNIT_AFFECTED_NBR"] else None
-        con.execute("insert into world_recalls values (?,?,?,?,?,?,?,?,?,?,?)",
+        con.execute("insert into world_recalls (source, country, campaign, date, make, model, year, system, description, units, url) values (?,?,?,?,?,?,?,?,?,?,?)",
                     ("Transport Canada", "Canada", camp, r["RECALL_DATE_DTE"][:10], r["MAKE_NAME_NM"], r["MODEL_NAME_NM"], yr,
                      r["SYSTEM_TYPE_ETXT"], r["COMMENT_ETXT"].strip(), units,
                      f"https://wwwapps.tc.gc.ca/Saf-Sec-Sur/7/VRDB-BDRV/search-recherche/detail.aspx?lang=eng&rn={camp}"))
@@ -126,7 +130,7 @@ def main():
         n += 1
         date = f"{y}-{mo:02d}-{d:02d}" if y and mo and d else (str(y) if y else None)
         mk = make.split("/")[0]
-        con.execute("insert into world_recalls values (?,?,?,?,?,?,?,?,?,?,?)",
+        con.execute("insert into world_recalls (source, country, campaign, date, make, model, year, system, description, units, url) values (?,?,?,?,?,?,?,?,?,?,?)",
                     ("MLIT", "Japan", camp or url.rsplit("/", 1)[-1], date, mk, models, None, None, defect, units, url))
         names = [x.strip() for x in re.split(r"\s*/\s*|\n|,\s*", models or "") if x.strip()]
         found = set()
@@ -139,6 +143,30 @@ def main():
                                 ("MLIT", camp or url.rsplit("/", 1)[-1], got[0], got[1], name, None))
         hit += bool(found)
     print(f"Japan: {n} motorcycle recalls, {hit} matched to our models")
+
+    # ---- UK DVSA recalls: RM/ references are motorcycles (R/ cars, RSPV special vehicles incl. quads)
+    if os.path.exists(DVSA):
+        n = hit = 0
+        def iso(d):
+            m = re.match(r"(\d\d)/(\d\d)/(\d{4})", d or "")
+            return f"{m[3]}-{m[2]}-{m[1]}" if m else None
+        for r in csv.DictReader(open(DVSA, encoding="utf-8", errors="replace")):
+            camp = r["Recalls Number"].strip()
+            if not camp.startswith("RM/"):
+                continue
+            n += 1
+            model = (r["Model"] or r["Recalls Model Information"]).strip()
+            units = int(r["Vehicle Numbers"]) if r["Vehicle Numbers"].strip().isdigit() else None
+            con.execute("insert into world_recalls values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        ("DVSA", "UK", camp, iso(r["Launch Date"]), r["Make"].strip(), model, None,
+                         r["Concern"].strip().capitalize(), r["Defect"].strip(), units,
+                         "https://www.check-vehicle-recalls.service.gov.uk/", r["Remedy"].strip(),
+                         r["Manufacturer Ref"].strip(), iso(r["Build Start"]), iso(r["Build End"])))
+            got = m.match(r["Make"], model)
+            if got:
+                hit += 1
+                con.execute("insert into world_recall_models values (?,?,?,?,?,?)", ("DVSA", camp, got[0], got[1], model, None))
+        print(f"UK DVSA: {n} motorcycle recall rows, {hit} matched to our models")
 
     # ---- UK fleet (latest quarter)
     rows = csv.reader(open(VEH0120, encoding="utf-8", errors="replace"))
