@@ -18,10 +18,13 @@ The owner (Marc) is not a developer. Keep explanations short and plain, never us
 
 ## How it works
 
-- The page talks to the Apps Script web app with `fetch`: GET `?action=log|stats|models`, POST JSON `{action: "add"|"delete", ...}` sent as text/plain (keeps it a simple CORS request).
-- Riders get a random "garage code" in localStorage; they only ever see their own entries plus per-model totals. Emails and photo links are never returned by the API.
+- The page talks to the Apps Script web app with `fetch`: GET `?action=log|stats|models`, POST JSON `{action: "add"|"delete"|"rename", ...}` sent as text/plain (keeps it a simple CORS request).
+- Riders get a random "garage code" in localStorage; they only ever see their own entries (the page no longer shows per-model totals; the `stats` endpoint still exists). Emails and photo links are never returned by the API.
 - Photos are resized in the browser to 1600px JPEG (this also strips EXIF/GPS) and sent as base64; the script saves them with the Advanced Drive service.
 - Script permissions are limited in `appsscript.json` to `spreadsheets.currentonly` and `drive.file`. Adding a Google service that needs a new scope means the owner must re-approve in the Apps Script editor (Run > `setup`).
+- Adding a bike requires its current mileage, saved as a `checkin` entry, so bikes with no failures still count.
+- One failure form can hold several parts; the page sends one `add` per part (photos go with the first part, notes with every part). "Edit bike" sends `rename`, which updates brand/model/year on all of that rider's rows for the bike.
+- Failures have `mileage_type`: `exact` (odometer = mileage when it failed) or `before` (rider didn't remember; odometer = bike mileage when logged, so the failure happened at or before it). The "typical mileage at failure" stat uses `exact` only.
 - `?src=...` on the page URL is stored with each entry so the sheet shows which post a rider came from.
 - With `API_URL` set to `''` the page runs in demo mode (localStorage only), useful for local testing.
 

@@ -18,12 +18,12 @@ const SHEET_NAME = 'entries';
 const HEADERS = [
   'entry_id', 'created_at', 'garage_id', 'source', 'brand', 'model', 'model_key',
   'year', 'country', 'email', 'type', 'date', 'odometer', 'unit', 'category',
-  'part_failed', 'notes', 'photos'
+  'part_failed', 'notes', 'photos', 'mileage_type', 'source_url'
 ];
 const TEXT_COLS = ['entry_id', 'created_at', 'garage_id', 'model', 'model_key', 'date', 'year'];
 const PUBLIC_FIELDS = [
   'entry_id', 'created_at', 'brand', 'model', 'year', 'country', 'type', 'date',
-  'odometer', 'unit', 'category', 'part_failed', 'notes'
+  'odometer', 'unit', 'category', 'part_failed', 'notes', 'mileage_type'
 ];
 const TYPES = ['repair', 'checkin'];
 const CATEGORIES = [
@@ -32,6 +32,11 @@ const CATEGORIES = [
   'Wheels & bearings', 'Frame & bodywork', 'Electronics & dash', 'Other'
 ];
 const UNITS = ['km', 'mi'];
+// For failures: 'exact' = odometer is the mileage when it failed.
+// 'before' = rider was not sure; odometer is the bike's mileage when they logged it,
+// so the failure happened at or before that point.
+const MILEAGE_TYPES = ['exact', 'before'];
+// Imported rows (e.g. from Reddit) may also say 'unknown': no mileage at all was given.
 const KM_PER_MI = 1.609344;
 const MAX_PER_HOUR = 60;
 const MAX_PHOTOS = 3;
@@ -106,6 +111,7 @@ function doPost(e) {
   try {
     if (body.action === 'add') return json_(add_(body));
     if (body.action === 'delete') return json_(delete_(body));
+    if (body.action === 'rename') return json_(rename_(body));
     return json_({ ok: false, error: 'Unknown action' });
   } catch (err) {
     return json_({ ok: false, error: String(err && err.message || err) });
@@ -167,8 +173,9 @@ function computeStats_(rows) {
     .sort(function (a, b) { return b[1] - a[1]; })
     .slice(0, 3);
 
-  // Median mileage at repair, in km.
+  // Median mileage at failure, in km. Only failures with a known mileage count here.
   const kms = repairs
+    .filter(function (r) { return r.mileage_type !== 'before'; })
     .map(function (r) { const o = Number(r.odometer) || 0; return r.unit === 'mi' ? o * KM_PER_MI : o; })
     .filter(function (x) { return x > 0; })
     .sort(function (a, b) { return a - b; });
@@ -247,7 +254,8 @@ function add_(b) {
     category: isRepair ? oneOf_(b.category, CATEGORIES, '') : 'No repairs',
     part_failed: isRepair ? clean_(b.part_failed, 300) : '',
     notes: clean_(b.notes, 500),
-    photos: ''
+    photos: '',
+    mileage_type: isRepair ? oneOf_(b.mileage_type, MILEAGE_TYPES, 'exact') : ''
   };
   if (isRepair && !entry.part_failed) return { ok: false, error: 'Say which part failed' };
 
@@ -320,6 +328,42 @@ function delete_(b) {
     try { Drive.Files.update({ trashed: true }, m[1]); } catch (_) {}
   });
   return { ok: true };
+}
+
+// A rider corrected their bike's brand, model or year: update all of their rows for that bike.
+function rename_(b) {
+  const garage = String(b.garage || '');
+  if (!validGarage_(garage)) return { ok: false, error: 'Bad request' };
+  const from = b.from || {};
+  const brand = clean_(b.brand, 40);
+  const model = clean_(b.model, 60);
+  if (!brand || !model) return { ok: false, error: 'Brand and model are required' };
+  const thisYear = new Date().getFullYear();
+  const y = parseInt(b.year, 10);
+  const year = y >= 1950 && y <= thisYear + 1 ? String(y) : '';
+  const fb = key_(from.brand), fm = key_(from.model), fy = String(from.year || '');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  let updated = 0;
+  try {
+    const sh = getSheet_();
+    const n = sh.getLastRow();
+    if (n < 2) return { ok: true, updated: 0 };
+    const c0 = HEADERS.indexOf('garage_id');
+    const cBrand = HEADERS.indexOf('brand'); // brand, model, model_key, year sit side by side
+    const vals = sh.getRange(2, 1, n - 1, HEADERS.length).getDisplayValues();
+    vals.forEach(function (r, i) {
+      if (r[c0] !== garage || key_(r[cBrand]) !== fb || r[cBrand + 2] !== fm || String(r[cBrand + 3]) !== fy) return;
+      const range = sh.getRange(i + 2, cBrand + 1, 1, 4);
+      range.setNumberFormats([['General', '@', '@', '@']]);
+      range.setValues([[safe_(brand), safe_(model), key_(model), year]]);
+      updated++;
+    });
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: true, updated: updated };
 }
 
 /* ---------- helpers ---------- */
