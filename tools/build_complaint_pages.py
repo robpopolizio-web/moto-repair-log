@@ -252,6 +252,11 @@ for m in sorted(models, key=lambda x: -x["complaints"]):
             url = base[:-1] + f"-{n}/"; n += 1
         paged[key] = url
 
+with open(os.path.join(ROOT, "data", "nhtsa", "page_urls.json"), "w") as f:
+    json.dump({f"{k[0]}|{k[1]}": u for k, u in paged.items()}, f)
+_ml = os.path.join(ROOT, "data", "mot", "links.json")
+mot_links = json.load(open(_ml)) if os.path.exists(_ml) else {}
+
 if os.path.isdir(OUT):
     shutil.rmtree(OUT)
 os.makedirs(OUT)
@@ -468,6 +473,11 @@ for m in models:
     if camps:
         body += [f"<h2>Recalls ({len(camps)})</h2>", "<p>Newest first. Open one to read the problem, the risk and the fix, plus the cause and timeline from the maker's own defect report and links to the official documents.</p>", recall_html(camps)]
 
+    if mot_links.get(f"{make}|{fam}"):
+        ml = sorted(mot_links[f"{make}|{fam}"], key=lambda x: -x["tests"])
+        body += ["<h2>UK MOT results</h2>",
+                 "<p>How often this bike fails its annual safety inspection in Great Britain, by part, age and mileage:</p>",
+                 "<ul>" + "".join(f'<li><a href="{e(x["url"])}">{e(x["name"])}</a>: {fmt(x["tests"])} MOTs</li>' for x in ml[:6]) + "</ul>"]
     if world.get(key):
         wk = world[key]
         body += [f"<h2>Recalls in Canada and Japan ({len(wk)})</h2>",
@@ -596,6 +606,9 @@ write("", page("Motorcycle Problems, Complaints & Recalls by Model (NHTSA Data)"
                f"Look up {fmt(tot_c)} US owner complaints and {fmt(tot_r)} recalls for {len(paged)} motorcycle models: what fails, at what mileage, and open recalls.",
                [("Moto Repair Log", "/"), ("Complaints", None)], body, "/complaints/", wide=False))
 sitemap.insert(0, "/complaints/")
+_ms = os.path.join(ROOT, "data", "mot", "sitemap_urls.json")
+if os.path.exists(_ms) and os.path.isdir(os.path.join(ROOT, "site", "mot")):
+    sitemap += json.load(open(_ms))
 
 # ---------------------------------------------------------------- sitemap + robots
 site = os.path.join(ROOT, "site")

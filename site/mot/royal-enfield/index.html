@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Royal Enfield MOT failure rates by model | UK MOT data</title>
+<meta name="description" content="UK MOT first-time failure rates for 10 Royal Enfield motorcycle models, compared with bikes of the same engine size.">
+<link rel="canonical" href="https://motorcycle-reliability-index.pages.dev/mot/royal-enfield/">
+
+<style>
+:root{--bg:#f5f3ee;--card:#fff;--ink:#1c1c1a;--muted:#6a675f;--line:#e2ded4;--accent:#b8430f;--accent-soft:#fbeee6;--ok:#2e6b3c;--ok-soft:#e6f2e8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:24px 18px 80px}
+nav.crumbs{font-size:.85rem;color:var(--muted);margin-bottom:10px}
+nav.crumbs a{color:var(--muted)}
+h1{font-size:2rem;line-height:1.15;margin:6px 0 10px;letter-spacing:-.01em}
+h2{font-size:1.3rem;margin:34px 0 10px;line-height:1.25}
+h3{font-size:1.05rem;margin:22px 0 6px}
+p{margin:0 0 14px}
+a{color:var(--accent)}
+.lede{font-size:1.08rem;color:#3a3833}
+.meta{font-size:.85rem;color:var(--muted);margin-bottom:18px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 8px;text-align:center}
+.stat b{display:block;font-size:1.6rem;line-height:1.15}
+.stat span{font-size:.78rem;color:var(--muted)}
+.answer{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:16px 18px;margin:8px 0 6px}
+.answer p:last-child{margin:0}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:.93rem;margin:6px 0 8px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#faf8f3;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.n{text-align:center;font-weight:700;white-space:nowrap}
+.issue{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0}
+.issue h3{margin-top:0}
+.tag{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:2px}
+ul{padding-left:20px;margin:0 0 14px}
+li{margin:4px 0}
+.ok{color:var(--ok);font-weight:600}
+.cta{background:var(--ink);color:#fff;border-radius:14px;padding:22px;margin:34px 0}
+.cta h2{margin-top:0;color:#fff}
+.cta a.btn{display:inline-block;background:#fff;color:var(--ink);font-weight:700;padding:11px 18px;border-radius:9px;text-decoration:none;margin-top:4px}
+.note{font-size:.88rem;color:var(--muted)}
+footer{margin-top:40px;font-size:.85rem;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+@media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}h1{font-size:1.6rem}table{font-size:.86rem}th,td{padding:8px}}
+
+.wrap.wide{max-width:960px}
+td.num,th.num{text-align:right;white-space:nowrap}
+.bar{display:inline-block;height:8px;border-radius:4px;background:var(--accent);vertical-align:middle;margin-right:6px}
+.hi{color:#b3261e;font-weight:600}.lo{color:#1e7b34;font-weight:600}
+.filter{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin:6px 0 10px}
+.small{font-size:.88rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap wide">
+<nav class="crumbs"><a href="/mot/">MOT data</a> › Royal Enfield</nav>
+<h1>Royal Enfield motorcycles: UK MOT failure rates by model</h1>
+<p class="meta">Updated 25 November 2026 · 10 models · DVSA MOT records 2025</p>
+<input class="filter" placeholder="Filter models" oninput="f(this)" aria-label="Filter models">
+<table id='t'><thead><tr><th>Model</th><th class='num'>MOTs</th><th class='num'>Failed first time</th><th class='num'>Class average</th></tr></thead><tbody><tr><td><a href='/mot/royal-enfield/interceptor-650cc/'>Interceptor (650 cc)</a></td><td class='num'>3,963</td><td class='num'>8.8%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/royal-enfield/himalayan-410cc/'>Himalayan (410 cc)</a></td><td class='num'>2,806</td><td class='num'>10.8%</td><td class='num'>11.9%</td></tr><tr><td><a href='/mot/royal-enfield/bullet-500cc/'>Bullet (500 cc)</a></td><td class='num'>2,604</td><td class='num'>10.3%</td><td class='num'>11.9%</td></tr><tr><td><a href='/mot/royal-enfield/meteor-350cc/'>Meteor (350 cc)</a></td><td class='num'>2,101</td><td class='num'>6.0%</td><td class='num'>11.9%</td></tr><tr><td><a href='/mot/royal-enfield/classic-350cc/'>Classic (350 cc)</a></td><td class='num'>906</td><td class='num'>6.4%</td><td class='num'>11.9%</td></tr><tr><td><a href='/mot/royal-enfield/continental-650cc/'>Continental (650 cc)</a></td><td class='num'>813</td><td class='num'>9.8%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/royal-enfield/bullt-500cc/'>Bullt (500 cc)</a></td><td class='num'>651</td><td class='num'>11.7%</td><td class='num'>11.9%</td></tr><tr><td><a href='/mot/royal-enfield/continental-540cc/'>Continental (540 cc)</a></td><td class='num'>438</td><td class='num'>12.8%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/royal-enfield/scram-410cc/'>Scram (410 cc)</a></td><td class='num'>305</td><td class='num'>9.8%</td><td class='num'>11.9%</td></tr><tr><td><a href='/mot/royal-enfield/bullet-350cc/'>Bullet (350 cc)</a></td><td class='num'>264</td><td class='num'>11.7%</td><td class='num'>11.9%</td></tr></tbody></table>
+<script>function f(i){var q=i.value.toLowerCase();document.querySelectorAll('#t tbody tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().indexOf(q)>-1?'':'none'})}</script>
+<footer>Data: DVSA anonymised MOT test results for Great Britain, contains public sector information licensed under the Open Government Licence v3.0. Last updated 25 November 2026. · <a href="/mot/methodology/">How we calculate this</a> · <a href="/mot/">All makes</a> · <a href="/complaints/">US complaints and recalls</a> · <a href="/">Log your bike on Moto Repair Log</a></footer>
+</div>
+</body>
+</html>

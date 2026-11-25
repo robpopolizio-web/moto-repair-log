@@ -35,7 +35,9 @@ MODEL_ALIASES = {("HONDA", "GL"): "Gold Wing", ("HONDA", "GOLDWING"): "Gold Wing
 
 
 def tok(s):
-    s = unicodedata.normalize("NFKC", s or "").upper()
+    s = re.sub(r"[™®©]", "", s or "")
+    s = unicodedata.normalize("NFKD", unicodedata.normalize("NFKC", s))
+    s = "".join(ch for ch in s if not unicodedata.combining(ch)).upper()   # TÉNÉRÉ -> TENERE
     s = re.sub(r"(?<=[A-Z])(?=\d)|(?<=\d)(?=[A-Z])", " ", s)   # CB1000R -> CB 1000 R
     return re.sub(r"[^A-Z0-9]+", " ", s).split()
 
@@ -73,6 +75,12 @@ class Matcher:
         joined = ["".join(mt[:k]) for k in range(1, len(mt) + 1)]
         for t, mk, fam in cands:
             if "".join(t) in joined:
+                return mk, fam
+        # our name appears later in theirs ("CRF1100 AFRICA TWIN", "GSX1300R - HAYABUSA"); only for
+        # distinctive names, so "R" or "SPORT" never match on their own
+        for t, mk, fam in cands:
+            distinctive = len(t) >= 2 and any(ch.isalpha() for w in t for ch in w) or (len(t) == 1 and len(t[0]) >= 5 and t[0].isalpha())
+            if distinctive and any(mt[i:i + len(t)] == t for i in range(1, len(mt) - len(t) + 1)):
                 return mk, fam
         return None
 

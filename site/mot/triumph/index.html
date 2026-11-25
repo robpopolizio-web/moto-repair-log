@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Triumph MOT failure rates by model | UK MOT data</title>
+<meta name="description" content="UK MOT first-time failure rates for 47 Triumph motorcycle models, compared with bikes of the same engine size.">
+<link rel="canonical" href="https://motorcycle-reliability-index.pages.dev/mot/triumph/">
+
+<style>
+:root{--bg:#f5f3ee;--card:#fff;--ink:#1c1c1a;--muted:#6a675f;--line:#e2ded4;--accent:#b8430f;--accent-soft:#fbeee6;--ok:#2e6b3c;--ok-soft:#e6f2e8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:24px 18px 80px}
+nav.crumbs{font-size:.85rem;color:var(--muted);margin-bottom:10px}
+nav.crumbs a{color:var(--muted)}
+h1{font-size:2rem;line-height:1.15;margin:6px 0 10px;letter-spacing:-.01em}
+h2{font-size:1.3rem;margin:34px 0 10px;line-height:1.25}
+h3{font-size:1.05rem;margin:22px 0 6px}
+p{margin:0 0 14px}
+a{color:var(--accent)}
+.lede{font-size:1.08rem;color:#3a3833}
+.meta{font-size:.85rem;color:var(--muted);margin-bottom:18px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 8px;text-align:center}
+.stat b{display:block;font-size:1.6rem;line-height:1.15}
+.stat span{font-size:.78rem;color:var(--muted)}
+.answer{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:16px 18px;margin:8px 0 6px}
+.answer p:last-child{margin:0}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:.93rem;margin:6px 0 8px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#faf8f3;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.n{text-align:center;font-weight:700;white-space:nowrap}
+.issue{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0}
+.issue h3{margin-top:0}
+.tag{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:2px}
+ul{padding-left:20px;margin:0 0 14px}
+li{margin:4px 0}
+.ok{color:var(--ok);font-weight:600}
+.cta{background:var(--ink);color:#fff;border-radius:14px;padding:22px;margin:34px 0}
+.cta h2{margin-top:0;color:#fff}
+.cta a.btn{display:inline-block;background:#fff;color:var(--ink);font-weight:700;padding:11px 18px;border-radius:9px;text-decoration:none;margin-top:4px}
+.note{font-size:.88rem;color:var(--muted)}
+footer{margin-top:40px;font-size:.85rem;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+@media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}h1{font-size:1.6rem}table{font-size:.86rem}th,td{padding:8px}}
+
+.wrap.wide{max-width:960px}
+td.num,th.num{text-align:right;white-space:nowrap}
+.bar{display:inline-block;height:8px;border-radius:4px;background:var(--accent);vertical-align:middle;margin-right:6px}
+.hi{color:#b3261e;font-weight:600}.lo{color:#1e7b34;font-weight:600}
+.filter{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin:6px 0 10px}
+.small{font-size:.88rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap wide">
+<nav class="crumbs"><a href="/mot/">MOT data</a> › Triumph</nav>
+<h1>Triumph motorcycles: UK MOT failure rates by model</h1>
+<p class="meta">Updated 25 November 2026 · 47 models · DVSA MOT records 2025</p>
+<input class="filter" placeholder="Filter models" oninput="f(this)" aria-label="Filter models">
+<table id='t'><thead><tr><th>Model</th><th class='num'>MOTs</th><th class='num'>Failed first time</th><th class='num'>Class average</th></tr></thead><tbody><tr><td><a href='/mot/triumph/bonneville-860cc/'>Bonneville (860 cc)</a></td><td class='num'>13,094</td><td class='num'>9.0%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/tiger-800cc/'>Tiger (800 cc)</a></td><td class='num'>8,327</td><td class='num'>7.6%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/street-680cc/'>Street (680 cc)</a></td><td class='num'>7,384</td><td class='num'>11.9%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/bonneville-1200cc/'>Bonneville (1200 cc)</a></td><td class='num'>7,187</td><td class='num'>8.6%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/speed-1050cc/'>Speed (1050 cc)</a></td><td class='num'>5,788</td><td class='num'>11.8%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/street-760cc/'>Street (760 cc)</a></td><td class='num'>4,891</td><td class='num'>7.6%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/tiger-1220cc/'>Tiger (1220 cc)</a></td><td class='num'>4,812</td><td class='num'>8.6%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/tiger-890cc/'>Tiger (890 cc)</a></td><td class='num'>4,089</td><td class='num'>6.8%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/tiger-1050cc/'>Tiger (1050 cc)</a></td><td class='num'>4,001</td><td class='num'>9.9%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/sprint-1050cc/'>Sprint (1050 cc)</a></td><td class='num'>3,821</td><td class='num'>12.6%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/speed-1200cc/'>Speed (1200 cc)</a></td><td class='num'>2,863</td><td class='num'>9.0%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/bonneville-790cc/'>Bonneville (790 cc)</a></td><td class='num'>2,209</td><td class='num'>10.8%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/daytona-680cc/'>Daytona (680 cc)</a></td><td class='num'>2,130</td><td class='num'>13.1%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/street-900cc/'>Street (900 cc)</a></td><td class='num'>2,118</td><td class='num'>9.4%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/rocket-2290cc/'>Rocket (2290 cc)</a></td><td class='num'>1,972</td><td class='num'>10.0%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/trident-660cc/'>Trident (660 cc)</a></td><td class='num'>1,840</td><td class='num'>8.9%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/speed-860cc/'>Speed (860 cc)</a></td><td class='num'>1,694</td><td class='num'>12.2%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/thruxton-1200cc/'>Thruxton (1200 cc)</a></td><td class='num'>1,654</td><td class='num'>9.5%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/scrambler-1200cc/'>Scrambler (1200 cc)</a></td><td class='num'>1,604</td><td class='num'>8.2%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/sprint-960cc/'>Sprint (960 cc)</a></td><td class='num'>1,503</td><td class='num'>15.1%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/thunderbird-880cc/'>Thunderbird (880 cc)</a></td><td class='num'>1,435</td><td class='num'>10.9%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/daytona-960cc/'>Daytona (960 cc)</a></td><td class='num'>1,428</td><td class='num'>15.2%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/tiger-960cc/'>Tiger (960 cc)</a></td><td class='num'>1,369</td><td class='num'>15.4%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/rocket-2460cc/'>Rocket (2460 cc)</a></td><td class='num'>1,267</td><td class='num'>5.8%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/thruxton-860cc/'>Thruxton (860 cc)</a></td><td class='num'>1,157</td><td class='num'>9.3%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/thunderbird-1700cc/'>Thunderbird (1700 cc)</a></td><td class='num'>1,126</td><td class='num'>10.0%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/trophy-1220cc/'>Trophy (1220 cc)</a></td><td class='num'>1,022</td><td class='num'>10.7%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/thunderbird-1600cc/'>Thunderbird (1600 cc)</a></td><td class='num'>948</td><td class='num'>11.4%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/tiger-1160cc/'>Tiger (1160 cc)</a></td><td class='num'>947</td><td class='num'>5.4%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/speed-960cc/'>Speed (960 cc)</a></td><td class='num'>910</td><td class='num'>15.2%</td><td class='num'>9.3%</td></tr><tr><td><a href='/mot/triumph/tiger-660cc/'>Tiger (660 cc)</a></td><td class='num'>854</td><td class='num'>5.4%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/legend-880cc/'>Legend (880 cc)</a></td><td class='num'>436</td><td class='num'>12.4%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/trident-880cc/'>Trident (880 cc)</a></td><td class='num'>362</td><td class='num'>12.4%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/trophy-880cc/'>Trophy (880 cc)</a></td><td class='num'>317</td><td class='num'>14.5%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/tt600-600cc/'>TT600 (600 cc)</a></td><td class='num'>292</td><td class='num'>20.5%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/daytona-600cc/'>Daytona (600 cc)</a></td><td class='num'>288</td><td class='num'>17.0%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/sprint-880cc/'>Sprint (880 cc)</a></td><td class='num'>276</td><td class='num'>12.0%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/speed-600cc/'>Speed (600 cc)</a></td><td class='num'>251</td><td class='num'>13.5%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/adventurer-880cc/'>Adventurer (880 cc)</a></td><td class='num'>195</td><td class='num'>10.8%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/america-790cc/'>America (790 cc)</a></td><td class='num'>177</td><td class='num'>11.9%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/daytona-880cc/'>Daytona (880 cc)</a></td><td class='num'>161</td><td class='num'>10.6%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/america-860cc/'>America (860 cc)</a></td><td class='num'>157</td><td class='num'>5.1%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/daytona-760cc/'>Daytona (760 cc)</a></td><td class='num'>134</td><td class='num'>7.5%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/speed-790cc/'>Speed (790 cc)</a></td><td class='num'>130</td><td class='num'>12.3%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/trident-750cc/'>Trident (750 cc)</a></td><td class='num'>115</td><td class='num'>9.6%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/scrambler-900cc/'>Scrambler (900 cc)</a></td><td class='num'>113</td><td class='num'>13.3%</td><td class='num'>12.3%</td></tr><tr><td><a href='/mot/triumph/daytona-1180cc/'>Daytona (1180 cc)</a></td><td class='num'>103</td><td class='num'>9.7%</td><td class='num'>9.3%</td></tr></tbody></table>
+<script>function f(i){var q=i.value.toLowerCase();document.querySelectorAll('#t tbody tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().indexOf(q)>-1?'':'none'})}</script>
+<footer>Data: DVSA anonymised MOT test results for Great Britain, contains public sector information licensed under the Open Government Licence v3.0. Last updated 25 November 2026. · <a href="/mot/methodology/">How we calculate this</a> · <a href="/mot/">All makes</a> · <a href="/complaints/">US complaints and recalls</a> · <a href="/">Log your bike on Moto Repair Log</a></footer>
+</div>
+</body>
+</html>
