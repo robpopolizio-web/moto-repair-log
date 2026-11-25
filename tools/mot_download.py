@@ -8,7 +8,7 @@ source files never sit on disk at once. Re-runs skip years already done.
 Source: DVSA / DfT, Open Government Licence v3.0.
 Run:  SSL_CERT_FILE=$(python3 -c 'import certifi; print(certifi.where())') python3 tools/mot_download.py [years...]
 """
-import gzip, io, os, sys, time, urllib.request, zipfile
+import gzip, io, os, subprocess, sys, time, urllib.request, zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "data", "mot", "moto")
@@ -32,6 +32,12 @@ def log(*a):
 
 def fetch(url, dest, tries=5):
     """Download to dest with resume. Returns dest."""
+    if dest.endswith(".zip") and os.path.exists(dest):
+        try:
+            zipfile.ZipFile(dest).close()   # complete zip already here from an earlier run
+            return dest
+        except zipfile.BadZipFile:
+            pass
     for i in range(tries):
         have = os.path.getsize(dest) if os.path.exists(dest) else 0
         req = urllib.request.Request(url, headers={"User-Agent": "moto-repair-log-mot/1.0",
@@ -57,11 +63,17 @@ def text_streams(path):
     if path.endswith(".gz"):
         yield io.TextIOWrapper(gzip.open(path, "rb"), encoding="utf-8", errors="replace", newline="")
     else:
+        # some DfT zips use Deflate64, which Python's zipfile cannot read; macOS unzip can.
+        # __MACOSX/._* entries are Finder metadata, not data.
         z = zipfile.ZipFile(path)
         for name in sorted(z.namelist()):
-            if name.endswith("/") or not name.lower().endswith((".csv", ".txt")):
+            if name.endswith("/") or name.startswith("__MACOSX") or "/._" in name or name.startswith("._") \
+                    or not name.lower().endswith((".csv", ".txt")):
                 continue
-            yield io.TextIOWrapper(z.open(name), encoding="utf-8", errors="replace", newline="")
+            proc = subprocess.Popen(["unzip", "-p", path, name], stdout=subprocess.PIPE)
+            yield io.TextIOWrapper(proc.stdout, encoding="utf-8", errors="replace", newline="")
+            proc.stdout.close()
+            proc.wait()
 
 
 def split_header(line):

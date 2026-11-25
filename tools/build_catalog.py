@@ -277,9 +277,19 @@ def main():
     # ---- EU Safety Gate
     if os.path.exists(EU):
         e = sqlite3.connect(EU)
-        for case, brand, name, country in e.execute("select caseNumber, brand, name, notifyingCountry from alerts"):
+        for case, brand, name, typ, desc, country in e.execute(
+                "select caseNumber, brand, name, type_numberOfModel, description, notifyingCountry from alerts"):
             done = set()
-            for nm in re.split(r"\s*[,;/]\s*", name or ""):
+            # the model is in the name, or else in the type field or description ("PCX125: JF28...", "XL883, XL1200C")
+            chunks = []
+            for field in (name, typ, desc):
+                parts = [c.strip() for c in re.split(r"\s*(?:[,;/:()]|\band\b|\bmodels?\b)\s*", field or "") if c.strip()]
+                chunks += parts
+                if done or any(find(brand or "", c)[0] for c in parts):
+                    break
+            for nm in chunks:
+                if len(nm) > 40 or not re.search(r"[A-Za-z]", nm):
+                    continue
                 key, rule = find(brand or "", nm)
                 if key and key not in done:
                     done.add(key)
