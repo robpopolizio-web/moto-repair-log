@@ -137,7 +137,7 @@ def page(title, desc, crumbs, body, canonical, ld=None, wide=False):
 <div class="wrap{' wide' if wide else ''}">
 <nav class="crumbs">{crumb_html}</nav>
 {body}
-<footer>Complaint and recall data: US National Highway Traffic Safety Administration (NHTSA), last updated {e(nice_date(BUILT))}. Complaints are written by owners, are not verified by NHTSA, and cover the US only. Counts are not adjusted for how many of each bike were sold. · <a href="/complaints/">All makes</a> · <a href="/">Log your bike on Moto Repair Log</a></footer>
+<footer>Data: US National Highway Traffic Safety Administration (NHTSA), Transport Canada, Japan MLIT and UK Department for Transport (Open Government Licence), last updated {e(nice_date(BUILT))}. Complaints are written by owners, are not verified by NHTSA, and cover the US only. Counts are not adjusted for how many of each bike were sold. · <a href="/complaints/">All makes</a> · <a href="/">Log your bike on Moto Repair Log</a></footer>
 </div>
 </body>
 </html>
@@ -194,6 +194,34 @@ if con.execute("select 1 from sqlite_master where name='recall_details'").fetcho
         details[r["campaign"]] = dict(r)
     for r in con.execute("select * from recall_documents order by load_date, doc_id"):
         documents[r["campaign"]].append(dict(r))
+
+# other countries and NHTSA investigations (tools/world_sources.py, tools/nhtsa_investigations.py); optional
+def has(t):
+    return con.execute("select 1 from sqlite_master where name=?", (t,)).fetchone() is not None
+
+
+world = defaultdict(lambda: defaultdict(lambda: {"rows": [], "names": set(), "years": set()}))  # key -> (source, campaign) -> info
+if has("world_recall_models"):
+    wr = {}
+    for r in con.execute("select * from world_recalls"):
+        wr.setdefault((r["source"], r["campaign"]), dict(r))
+    for r in con.execute("select * from world_recall_models"):
+        info = world[(r["make"], r["model_family"])][(r["source"], r["campaign"])]
+        info["rec"] = wr.get((r["source"], r["campaign"]))
+        info["names"].add(r["foreign_model"])
+        if r["year"]:
+            info["years"].add(r["year"])
+invs = defaultdict(dict)   # key -> action -> rows
+if has("investigation_models"):
+    inv_rows = defaultdict(list)
+    for r in con.execute("select * from investigations"):
+        inv_rows[r["action"]].append(dict(r))
+    for r in con.execute("select * from investigation_models"):
+        invs[(r["make"], r["model_family"])][r["action"]] = inv_rows[r["action"]]
+uk = {}
+if has("uk_fleet_models"):
+    for r in con.execute("select * from uk_fleet_models"):
+        uk[(r["make"], r["model_family"])] = dict(r)
 
 # give each make/model a unique slug
 make_slug = {}
@@ -317,6 +345,40 @@ def recall_html(camps):
     return "\n".join(out)
 
 
+COUNTRY = {"Transport Canada": ("Canada", "Transport Canada"), "MLIT": ("Japan", "Japan's transport ministry (MLIT)")}
+
+
+def world_html(items):
+    out = []
+    for (src, camp), info in sorted(items.items(), key=lambda kv: (kv[1].get("rec") or {}).get("date") or "", reverse=True):
+        r = info.get("rec") or {}
+        country, who = COUNTRY.get(src, (src, src))
+        ys = years_label(sorted(info["years"])) if info["years"] else ""
+        names = ", ".join(sorted(n.title() if n.isupper() else n for n in info["names"]))
+        units = f" · {fmt(r['units'])} bikes" if r.get("units") else ""
+        sysname = f" · {e(r['system'])}" if r.get("system") and r["system"] not in ("Not Entered",) else ""
+        desc = clip(re.sub(r"^Issue:\s*", "", r.get("description") or ""), 700) or "No description published."
+        out.append(f"""<details class="rc"><summary>{e(country)}: {e(names)}{(" " + e(ys)) if ys else ""} <span>· {e(r.get('date') or '')} · no. {e(camp)}{units}{sysname}</span></summary>
+<p>{e(desc)}</p>
+<p><a href="{e(r.get('url') or '#')}" rel="nofollow noopener" target="_blank">Source: {e(who)}</a></p></details>""")
+    return "\n".join(out)
+
+
+def inv_html(items):
+    out = []
+    for act, rows in sorted(items.items(), key=lambda kv: kv[1][0]["opened"] or "", reverse=True):
+        r = rows[0]
+        ys = years_label([x["year"] for x in rows if x["year"]])
+        od, cd = (r["opened"] or "")[:4], (r["closed"] or "")[:4]
+        when = f"{od}–{cd}" if cd else f"opened {od}, still open"
+        result = (f' It led to recall <a href="https://www.nhtsa.gov/recalls?nhtsaId={e(r["campaign"])}" rel="nofollow noopener" target="_blank">{e(r["campaign"])}</a>.'
+                  if r["campaign"] else "")
+        out.append(f"""<details class="rc"><summary>{e(sentence(r['subject'].title()) if r['subject'].isupper() else r['subject'])}{(": " + e(ys)) if ys else ""} <span>· {e(r['kind'])} {e(act)} · {e(when)}</span></summary>
+<p>{e(clip(r['summary'] or '', 900))}{result}</p>
+<p><a href="https://www.nhtsa.gov/?nhtsaId={e(act)}" rel="nofollow noopener" target="_blank">NHTSA investigation {e(act)}</a></p></details>""")
+    return "\n".join(out)
+
+
 # ---------------------------------------------------------------- model pages
 sitemap = []
 make_rows = defaultdict(list)
@@ -369,6 +431,7 @@ for m in models:
             f'<div class="stat"><b>{len(camps)}</b><span>recalls</span></div>',
             f'<div class="stat"><b>{fmt(med) + " mi" if med else "n/a"}</b><span>median mileage at complaint</span></div>',
             f'<div class="stat"><b>{crashes}</b><span>said it led to a crash</span></div>',
+            (f'<div class="stat"><b>{fmt(uk[key]["licensed"])}</b><span>on UK roads ({e(uk[key]["quarter"])})</span></div>' if uk.get(key, {}).get("licensed") else ""),
             "</div>",
             f'<div class="answer">{answer}</div>']
     if key in REPORTS:
@@ -404,6 +467,16 @@ for m in models:
 
     if camps:
         body += [f"<h2>Recalls ({len(camps)})</h2>", "<p>Newest first. Open one to read the problem, the risk and the fix, plus the cause and timeline from the maker's own defect report and links to the official documents.</p>", recall_html(camps)]
+
+    if world.get(key):
+        wk = world[key]
+        body += [f"<h2>Recalls in Canada and Japan ({len(wk)})</h2>",
+                 "<p>Recalls filed with Transport Canada and Japan's transport ministry for bikes listed under this model name. Many are the same fault as a US recall above; some were only issued there.</p>",
+                 world_html(wk)]
+    if invs.get(key):
+        body += [f"<h2>NHTSA defect investigations ({len(invs[key])})</h2>",
+                 "<p>Times the US safety regulator looked into a possible defect on this bike. Not every investigation finds one.</p>",
+                 inv_html(invs[key])]
 
     if n:
         pick = sorted(cs, key=lambda c: (c["received_date"] or ""), reverse=True)
