@@ -144,8 +144,9 @@ def main():
         key = (m["make"], m["model_key"])
         mk, nm = make_name(m["make"]), model_name(m["model"])
         cc = m["cc"]
-        title_name = f"{mk} {nm}" + (f" ({cc} cc)" if cc else "")
-        url = f"/mot/{slug(mk)}/{slug(nm)}" + (f"-{cc}cc" if cc else "") + "/"
+        era = m["era"] if "era" in m.keys() else None    # one generation of a name used twice (mot_build.find_eras)
+        title_name = f"{mk} {nm}" + (f" ({cc} cc)" if cc else "") + (f" {era}" if era else "")
+        url = f"/mot/{slug(mk)}/{slug(nm)}" + (f"-{cc}cc" if cc else "") + (f"-{era}" if era else "") + "/"
         n = 2
         while url in used:
             url = url[:-1] + f"-{n}/"; n += 1

@@ -25,6 +25,7 @@ from collections import Counter, defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from world_sources import tok, make_key  # noqa: E402
+import factory_codes  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NHTSA = os.path.join(ROOT, "data", "nhtsa", "motorcycles.sqlite")
@@ -47,15 +48,22 @@ MAKE_DISPLAY = {"BMW": "BMW", "KTM": "KTM", "MV AGUSTA": "MV Agusta", "CFMOTO": 
 CODE_ALIASES = {("HONDA", "GL"): "Gold Wing", ("HONDA", "GOLDWING"): "Gold Wing"}
 # factory codes DVSA records use for bikes sold under a name (GLR125 is the CB125F, NSC110 the Vision 110)
 UK_CODES = {("HONDA", "GLR"): "CB125F", ("HONDA", "NSC"): "Vision", ("HONDA", "WW"): "PCX", ("HONDA", "SH"): "SH",
-            ("HONDA", "FES"): "S-Wing", ("HONDA", "NSS"): "Forza", ("HONDA", "ANF"): "Innova", ("HONDA", "SCV"): "Lead"}
+            ("HONDA", "FES"): "S-Wing", ("HONDA", "NSS"): "Forza", ("HONDA", "ANF"): "Innova", ("HONDA", "SCV"): "Lead",
+            ("YAMAHA", "XP"): "TMAX"}
 # factory codes for bikes better known by name: joined-name regex -> replacement
 SYNONYMS = {"SUZUKI": [(r"^GSF(\d)", r"BANDIT\1")], "HONDA": [(r"^CBR1100X$", "CBR1100XX"), (r"^VFR800FI$", "VFR800")]}
 # variant codes after a model name; group 1 is the model. Only merged when that model exists.
 VARIANT_SUFFIX = {
+    "HONDA": [r"(.*\d[A-Z]*?[A-Z])[A-HJ-NPQ9]"],                         # year letter: CBF125MB = 2011 CBF125M
     "*": [r"(?!.*GSA$)(.*\d[A-Z]*?[A-Z])A", r"(.*\d.*?)ABS", r"(.*\d[A-Z]*)FI"],   # A = ABS (CB500XA), FI = fuel injection
     "SUZUKI": [r"(.*\d[A-Z]*?)[KLM]\d"],                                 # K7 = 2007, L1 = 2011
     "YAMAHA": [r"(.*\d[A-Z]?)[A-Z]{0,2}C"],                               # California models (YZFR1KC)
 }
+# A UK MOT family whose bikes were first registered 8+ years before (or after) every year of a model is an
+# older (or newer) generation that shares the name: the 1970s Z900 is not the 2017 Z900.
+ERA_GAP = 8
+# names that start like another model's but are a different bike (Z900RS is not a trim of the Z900)
+SEPARATE = {"KAWASAKI": {"Z900RS", "Z650RS"}, "TRIUMPH": {"SPEEDTWIN", "SPEEDTRIPLE"}}
 # Harley-Davidson factory codes (used by DVSA, DfT and often Transport Canada) -> model names.
 # A trailing I (fuel injection) is ignored: FLSTCI = FLSTC.
 HD_CODES = {
@@ -127,13 +135,15 @@ def main():
     bikes = {}            # (make_key, base tokens tuple) -> bike dict
     index = defaultdict(list)   # make_key -> [(base tokens, bike key)]
 
-    def add_bike(mk_disp, model_disp, origin, cc=None):
-        key = (make_key(mk_disp), tuple(base_tokens(tok(model_disp))))
+    def add_bike(mk_disp, model_disp, origin, cc=None, era=None):
+        """era=(from, to) makes an older generation its own bike: it is never matched by name, only by its MOTs."""
+        key = (make_key(mk_disp), tuple(base_tokens(tok(model_disp))) + ((f"@{era[0]}",) if era else ()))
         if key not in bikes:
             bikes[key] = {"make": mk_disp, "model": model_disp, "origin": origin, "cc": cc, "names": Counter(),
                           "us": [], "mot": [], "rec": [], "inv": set(), "fleet": [0, 0, None], "years": set(),
-                          "us_complaints": 0, "us_recalls": set(), "aliases": []}
-            index[key[0]].append((list(key[1]), key))
+                          "us_complaints": 0, "us_recalls": set(), "aliases": [], "era": era, "mot_years": []}
+            if not era:
+                index[key[0]].append((list(key[1]), key))
         return key
 
     # ---- 1. NHTSA families
@@ -163,12 +173,15 @@ def main():
         b["years"] |= f["years"]
         b["aliases"].append(("NHTSA", mk, fam, None, "same name" if tuple(base_tokens(t)) == tuple(t) else "trim of " + " ".join(base_tokens(t)).title()))
 
-    def find(make, model, cc=None):
+    codes = None          # factory codes, learned once the US models exist (below)
+
+    def find(make, model, cc=None, use_codes=True):
         """Bike key for a source name, or (None, reason)."""
         mt = tok(model)
         if not mt or " ".join(mt) in NEVER_ALONE:
             return None, "no model name"
         bt = base_tokens(mt)
+        bt0 = list(bt)
         if make_key(make) == "HARLEY-DAVIDSON":
             code = "".join(bt[:2]) if len(bt) > 1 and bt[1].isdigit() else bt[0]
             for c in (code, re.sub(r"I$", "", code), bt[0], re.sub(r"I$", "", bt[0])):
@@ -185,9 +198,21 @@ def main():
         alias = CODE_ALIASES.get((make_key(make), bt[0]))
         if alias and (bt[0] == "GOLDWING" or (len(bt) > 1 and bt[1] in ("1000", "1100", "1200", "1500", "1800")) or (cc and cc >= 1000)):
             bt = tok(alias)
+        coded = "code " if bt != bt0 else ""     # the name came from a code table (FLSTF -> Fat Boy)
+        if codes and use_codes and factory_codes.is_code(codes.code_part(bt0)):
+            # a factory code learned from records that give both wins over a name that merely starts the same
+            # (ZR900BHF is a Z900, not the recall-only "ZR900"; ER650H is a Z650, not an ER-6n)
+            r = codes.lookup(make_key(make), codes.code_part(bt0))
+            if r and r[0] in bikes:
+                en = engine_number(list(r[0][1]))
+                if not (cc and en and abs(en - cc) > 0.15 * en):
+                    return r[0], f"factory code {r[1]}"
         cands = sorted(index.get(make_key(make), []), key=lambda x: -len(x[0]))
         hit = None
+        sep = [x for x in SEPARATE.get(make_key(make), ()) if "".join(bt).startswith(x)]
         for t, key in cands:
+            if sep and len("".join(t)) < len(sep[0]):
+                continue
             if bt[:len(t)] == t or "".join(t) in ["".join(bt[:k]) for k in range(1, len(bt) + 1)]:
                 hit = (key, "name")
                 break
@@ -197,13 +222,25 @@ def main():
                 if distinctive and any(bt[i:i + len(t)] == t for i in range(1, len(bt) - len(t) + 1)):
                     hit = (key, "name inside")
                     break
+        if not hit and codes and use_codes:
+            # a factory code learned from records that give both (ZR900BHF -> Z900, DL650AL2 -> V-Strom 650)
+            r = codes.lookup(make_key(make), codes.code_part(bt0))
+            if r and r[0] in bikes:
+                key = r[0]
+                en = engine_number(list(key[1]))
+                if not (cc and en and abs(en - cc) > 0.15 * en):
+                    return key, f"factory code {r[1]}"
         if not hit:
             cc = cc or engine_number(bt)   # "VESPA GTS 300 SUPER" says its own size
             starts = {key for t, key in cands if t[:len(bt)] == bt and len(t) > len(bt)}
             if cc and starts:
                 # MT at 690 cc can only be the MT-07; YZF at 120 cc is none of R1/R3/R6/R7
+                # a bike whose real engine size is known must fit it too: ZR at 810 cc is the Z800, not the Z900 (948 cc)
+                starts = {k for k in starts if not (bikes[k]["cc"] and abs(bikes[k]["cc"] - cc) > 0.12 * bikes[k]["cc"])}
                 size = {k: engine_number(list(k[1])) or bikes[k]["cc"] for k in starts}
-                fit = sorted((k for k in starts if size[k] and abs(size[k] - cc) <= 0.12 * size[k]), key=lambda k: abs(size[k] - cc))
+                # 12% when the bike's own engine size is known, 8% for the number in its name (900 for a 948 cc Z900)
+                tol = {k: 0.12 if bikes[k]["cc"] else 0.08 for k in starts}
+                fit = sorted((k for k in starts if size[k] and abs(size[k] - cc) <= tol[k] * size[k]), key=lambda k: abs(size[k] - cc))
                 # clearly closest wins: MT at 690 cc is the MT-07 (689), not the 2006 MT-03 (660)
                 if len(fit) >= 2 and abs(size[fit[0]] - cc) <= 0.03 * cc and \
                         abs(size[fit[0]] - cc) * 3 < abs(size[fit[1]] - cc) and size[fit[0]] != size[fit[1]]:
@@ -221,18 +258,45 @@ def main():
         en = engine_number(list(key[1]))
         if cc and en and abs(en - cc) > 0.15 * en:
             return None, f"engine size {cc} cc does not fit {bikes[key]['model']}"
-        return key, rule
+        return key, coded + rule
+
+    # factory codes -> the US models they belong to, learned from records that give both
+    pairs = factory_codes.mine(NHTSA, EU if os.path.exists(EU) else None)
+    codes = factory_codes.CodeMap(pairs, lambda mk, nm: find(mk, nm, use_codes=False)[0],
+                                  base=lambda nm: " ".join(w for w in nm.split() if w.upper() not in TRIM_WORDS | {"CAFÉ"}) or nm,
+                                  make_key=make_key)
+    print(f"factory codes learned: {len(codes.map)} linked to a model, {len(codes.labels)} naming a model of their own")
 
     # ---- 2. UK MOT families
     if os.path.exists(MOT):
         m = sqlite3.connect(MOT)
-        rows = m.execute("select make, model_key, model, cc, tests from models order by tests desc").fetchall()
+        rows = m.execute("select make, model_key, model, cc, tests, year_from, year_to from models order by tests desc").fetchall()
         trims = defaultdict(list)
         for mk, mkey, name, t in m.execute("select make, model_key, name, tests from model_trims"):
             trims[(mk, mkey)].append((name, t))
-        def link(mk, mkey, model, cc, tests, last):
+        def span(b):
+            """The years a bike covers: its US model years and the first-use years of the MOTs linked so far."""
+            ys = []
+            if b["years"]:
+                ys += [min(b["years"]) - 2, max(b["years"]) + 1]
+            for y0, y1 in b["mot_years"]:
+                ys += [y0, y1]
+            return (min(ys), max(ys)) if ys else None
+
+        def other_era(key, y0, y1):
+            b = bikes[key]
+            # US data from only a year or two says little about when a model was sold: a modern UK family
+            # (Piaggio Typhoon 50, sold since 1995) is not another generation of the 2025 US listing
+            if not b["mot_years"] and b["years"] and max(b["years"]) - min(b["years"]) <= 2 and y1 and y1 >= 2010:
+                return False
+            sp = span(b)
+            return bool(sp and y0 and y1 and (y1 < sp[0] - ERA_GAP or y0 > sp[1] + ERA_GAP))
+
+        era_kids = defaultdict(list)    # bike -> its older/newer generations
+
+        def link(mk, mkey, model, cc, tests, y0, y1, last):
             # 1. vote: match each full DVSA name in the family ("STREET TRIPLE R", "FLHX STREET GLIDE")
-            votes, matched = Counter(), 0
+            votes, matched, by_code = Counter(), 0, Counter()
             fam_tokens = tok(model)
             for name, t in trims[(mk, mkey)]:
                 if tok(name)[:len(fam_tokens) + 1] == fam_tokens:   # a bare "TIGER" says nothing about which Tiger
@@ -240,16 +304,33 @@ def main():
                 key, rule = find(mk, name, cc)
                 if key:
                     votes[key] += t; matched += t
+                    if rule.startswith(("code", "factory code")):
+                        by_code[key] += t
             key, rule = None, ""
             fam_word = re.sub(r"[^A-Z]", "", model.upper().split()[0]) if model.strip() else ""
             if votes:
                 best, v = votes.most_common(1)[0]
                 bike_letters = re.sub(r"[^A-Z]", "", "".join(best[1]))
-                # a family named after another word (TRACER) is a different model, even if its records say "MT-07 TRACER"
-                if fam_word and fam_word not in bike_letters and bike_letters not in fam_word:
+                fk, fr = find(mk, model, cc)
+                # a family named after another word (TRACER) is a different model, even if its records say "MT-07 TRACER";
+                # unless the family's name is a factory code of that model (FLSTF = Fat Boy, CRF1000 = Africa Twin)
+                if fam_word and fam_word not in bike_letters and bike_letters not in fam_word and not (fk == best and fr.startswith(("code", "factory code"))) and by_code[best] < 0.7 * v:
                     votes = Counter()
                 elif v >= 0.7 * matched and matched >= 0.25 * tests:
                     key, rule = best, f"full names ({round(100 * v / tests)}% of MOTs)"
+            if not key and re.fullmatch(r"[A-Z]{1,4}", model.strip()) and cc:
+                # a bare code with its engine size: "CRF" at 1000 cc is the CRF1000 (Africa Twin)
+                for size in dict.fromkeys((cc, int(round(cc / 50.0)) * 50, int(round(cc / 100.0)) * 100)):
+                    r = codes.lookup(make_key(mk), model.strip() + str(size))
+                    if r and r[0] in bikes:
+                        key, rule = r[0], f"factory code {r[1]} (name + engine size)"
+                        break
+                    j = model.strip() + str(size)
+                    lab = [nm for (m2, c), nm in codes.labels.items() if m2 == make_key(mk) and (c == j or (c.endswith("*") and j.startswith(c[:-1])))]
+                    if lab:   # a code naming a model with no US page yet: "ZR" at 810 cc is the Z800
+                        key = find(mk, lab[0], cc)[0] or add_bike(MAKE_DISPLAY.get(make_key(mk), make_key(mk).title()), lab[0], "UK MOT", cc)
+                        rule = f"factory code {j} = {lab[0]}"
+                        break
             # 2. the family name itself, with its engine size when the name has no number
             if not key and cc and not re.search(r"\d", model):
                 # the bike called "<name> <number>" whose number is closest to the engine size (TIGER 1220 cc -> Tiger 1200)
@@ -257,8 +338,10 @@ def main():
                 best = None
                 for t, k2 in index.get(make_key(mk), []):
                     if len(t) == len(ft) + 1 and t[:len(ft)] == ft and t[-1].isdigit():
+                        if bikes[k2]["cc"] and abs(bikes[k2]["cc"] - cc) > 0.12 * bikes[k2]["cc"]:
+                            continue      # its real engine size rules it out (ZR at 810 cc is not the 948 cc Z900)
                         d = abs(int(t[-1]) - cc) / cc
-                        if d <= 0.15 and (best is None or d < best[0]):
+                        if d <= (0.15 if bikes[k2]["cc"] else 0.08) and (best is None or d < best[0]):
                             best = (d, k2)
                 # but not when a longer name with another engine size also fits (CB at 470 cc: CB450 or CB500F/X?)
                 if best:
@@ -275,10 +358,30 @@ def main():
                 model = code if not key else model
             if not key:
                 key, rule = find(mk, model, cc)
-                if key:
+                if key and not rule.startswith(("code", "factory code")):
                     bl = re.sub(r"[^A-Z]", "", "".join(key[1]))
                     if fam_word and fam_word not in bl and bl not in fam_word:
                         key, rule = None, "different model word"
+            def loose(k):   # matched only roughly: by engine size, inside a longer name, or its number is off (M821 vs M900)
+                en = engine_number([t for t in k[1] if not t.startswith("@")])
+                return "engine size" in rule or rule.startswith("name inside") or bool(en and cc and abs(en - cc) > 0.05 * en)
+            if key and other_era(key, y0, y1) and loose(key):
+                # a loose match that is also decades apart is simply a different model (M821 is not the M900)
+                key, rule = None, "no matching model"
+                if tests >= 100:
+                    disp_mk = MAKE_DISPLAY.get(make_key(mk), " ".join(w.capitalize() for w in make_key(mk).split()))
+                    key, rule = add_bike(disp_mk, model if re.search(r"\d", model) else f"{model.title()} {cc}", "UK MOT", cc), "new UK-only model"
+            if key and other_era(key, y0, y1):
+                # same name, another generation: its own bike, named with its years
+                if tests < 100:
+                    out.execute("insert into unassigned values (?,?,?,?,?,?)", ("UK MOT", mk, model, cc, f"older/newer generation of {bikes[key]['model']}", tests))
+                    return True
+                b0, parent = bikes[key], key
+                same = [k for k in era_kids[parent] if not other_era(k, y0, y1)]
+                key = same[0] if same else add_bike(b0["make"], b0["model"], "UK MOT", cc, era=(y0, y1))
+                if not same:
+                    era_kids[parent].append(key)
+                rule = f"generation {y0}-{y1} of {b0['model']}"
             if not key and not last and rule.startswith("fits several"):
                 return False   # retry once every named model has its engine size from its own records
             name_only = rule in ("no matching model", "no model with this engine size") and len(re.sub(r"[^A-Z]", "", model.upper())) >= 3
@@ -300,6 +403,8 @@ def main():
                     return True
             b = bikes[key]
             b["mot"].append((mk, mkey, tests, rule))
+            if y0 and y1:
+                b["mot_years"].append((y0, y1))
             b["cc"] = b["cc"] or cc
             b["aliases"].append(("UK MOT", mk, model, cc, rule))
             return True
@@ -373,7 +478,7 @@ def main():
         return j
 
     def merge_into(dst, src):
-        for f in ("us", "mot", "rec", "aliases"):
+        for f in ("us", "mot", "rec", "aliases", "mot_years"):
             dst[f] += src[f]
         for f in ("inv", "years", "us_recalls"):
             dst[f] |= src[f]
@@ -388,10 +493,38 @@ def main():
     merged, merge_log = 0, []
     def us_named(k):
         return bikes[k]["origin"] == "NHTSA" and bikes[k]["us_complaints"] > 0
+
+    # bikes named by a factory code: join the model the code belongs to (ZR900 -> Z900, GSX1300R -> Hayabusa),
+    # or take the name the code stands for when that model has no bike yet (ZR900C -> Z900RS)
+    labels = defaultdict(list)
+    for (mk, code), name in codes.labels.items():
+        labels[mk].append((code, name))
+    for mk in labels:
+        labels[mk].sort(key=lambda x: -len(x[0]))
+    for k in list(bikes):
+        if k not in bikes or bikes[k].get("era"):
+            continue
+        j = "".join(k[1])
+        if not factory_codes.is_code(j):
+            continue
+        r = codes.lookup(k[0], j)
+        if r and r[0] != k and r[0] in bikes and not (us_named(k) and us_named(r[0])):
+            merge_log.append((bikes[k]["make"], bikes[k]["model"], bikes[r[0]]["model"]))
+            merge_into(bikes[r[0]], bikes.pop(k))
+            merged += 1
+            continue
+        for code, name in labels.get(k[0], []):
+            c = code.rstrip("*")
+            if j.startswith(c) and len(j) - len(c) <= 5:
+                bikes[k]["aliases"].append(("factory code", bikes[k]["make"], bikes[k]["model"], None, f"named {name}"))
+                bikes[k]["model"] = name
+                break
     for _ in range(4):   # chains: GSF1250SAK7 -> GSF1250SA -> GSF1250S -> Bandit 1250S
         by = defaultdict(dict)
         ctoks = {}
         for key, b in bikes.items():
+            if b.get("era"):          # an older generation keeps its own page
+                continue
             by[make_key(b["make"])].setdefault(canon(b), []).append(key)
             ctoks[key] = [w for w in base_tokens(tok(re.sub(r"\(.*?\)", " ", b["model"]))) if w != "REDUNDANT"]
         target = {}
@@ -442,15 +575,19 @@ def main():
     used_slugs = set()
     for key, b in sorted(bikes.items(), key=lambda kv: (kv[1]["make"], kv[1]["model"])):
         bid += 1
+        if b["model"].isupper() and len(b["model"]) > 3:      # "TIGER 1050 ABS SE" -> "Tiger 1050"
+            base = [t for t in key[1] if not t.startswith("@")]
+            raw = b["model"].split()
+            keep = [w for w in raw if any(w.upper().replace("-", "") == "".join(tok(w)) and t in tok(w) for t in base)] or raw
+            b["model"] = " ".join(w if re.search(r"\d", w) else w.capitalize() for w in keep[:max(1, len(base))])
+        if b.get("era"):          # an older generation sharing the name: "Z900 (1972-1981)"
+            y0, y1 = min(y for y, _ in b["mot_years"]), max(y for _, y in b["mot_years"])
+            b["model"] = f"{b['model']} ({y0}-{y1})"
+            b["years"] = {y0, y1}
         s = f"{slug(b['make'])}/{slug(b['model'])}"
         while s in used_slugs:
             s += "-2"
         used_slugs.add(s)
-        if b["model"].isupper() and len(b["model"]) > 3:      # "TIGER 1050 ABS SE" -> "Tiger 1050"
-            base = list(key[1])
-            raw = b["model"].split()
-            keep = [w for w in raw if any(w.upper().replace("-", "") == "".join(tok(w)) and t in tok(w) for t in base)] or raw
-            b["model"] = " ".join(w if re.search(r"\d", w) else w.capitalize() for w in keep[:max(1, len(base))])
         ys = sorted(b["years"])
         out.execute("insert into bikes values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (bid, b["make"], b["model"], s, b["cc"], b["origin"], b["us_complaints"], len(b["us_recalls"]),
@@ -463,6 +600,14 @@ def main():
         out.executemany("insert into bike_investigations values (?,?)", [(bid, a) for a in sorted(b["inv"])])
         if b["fleet"][2]:
             out.execute("insert into bike_uk_fleet values (?,?,?,?)", (bid,) + tuple(b["fleet"]))
+    # the learned factory codes, with the records that taught them (for review)
+    out.execute("create table factory_codes (make TEXT, code TEXT, bike_model TEXT, label TEXT, evidence TEXT)")
+    for (mk, code), key in codes.map.items():
+        out.execute("insert into factory_codes values (?,?,?,?,?)", (mk, code, " ".join(key[1]), codes.labels.get((mk, code)),
+                    "; ".join(sorted({f"{s_} = {n_}" for s_, n_ in codes.evidence[(mk, code)]})[:6])))
+    for (mk, code), lab in codes.labels.items():
+        if (mk, code) not in codes.map:
+            out.execute("insert into factory_codes values (?,?,?,?,?)", (mk, code, None, lab, None))
     out.execute("insert into meta values ('built_at', datetime('now'))")
     out.commit()
     out.close()

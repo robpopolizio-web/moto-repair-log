@@ -145,6 +145,38 @@ def cc10(cc):
 
 
 FAMILY = {}   # (make, first word, cc10) -> (family name, family cc); filled by build_families()
+ERAS = {}     # (make, family name, family cc) -> [(first year, last year), ...] when one name covers two generations
+
+
+def find_eras(ys):
+    """Split a family's first-use years where nothing was registered for 6+ years: the 1960s Bonneville and
+    the 2001 one, the Tiger 885/955, 800 and 900. Both sides need 300+ records and 5% of the family.
+    Returns [(from, to), ...] oldest first, or [] when the family is one generation."""
+    T = sum(ys.values())
+    if T < 1000 or not ys:
+        return []
+    small = lambda y: ys.get(y, 0) < max(10, 0.003 * T)
+    lo, hi = min(ys), max(ys)
+    cuts, y = [], lo
+    while y <= hi:
+        if small(y):
+            s = y
+            while y <= hi and small(y):
+                y += 1
+            if y - s >= 6:
+                before = sum(v for yy, v in ys.items() if yy < s)
+                after = sum(v for yy, v in ys.items() if yy >= y)
+                if min(before, after) >= max(300, 0.05 * T):
+                    cuts.append((s, y))          # gap s .. y-1, next era starts at y
+        y += 1
+    if not cuts:
+        return []
+    eras, start = [], lo
+    for s, nxt in cuts + [(hi + 1, None)]:
+        seg = {yy: v for yy, v in ys.items() if start <= yy < s and not small(yy)} or {start: 1}
+        eras.append((min(seg), max(seg)))
+        start = nxt
+    return eras
 
 
 def build_families(paths):
@@ -155,15 +187,20 @@ def build_families(paths):
        that one holds at least 80% of the longer names' MOTs at the same engine size.
     The family is shown under its most common spelling and engine size."""
     cnt = Counter()
+    fu_cnt = defaultdict(Counter)                # (make, first word, cc10) -> first-use year -> records
     for path in paths:
         with gzip.open(path, "rt", encoding="utf-8", errors="replace") as f:
             cols = f.readline().rstrip("\n").split("|")
             ix = {c: i for i, c in enumerate(cols)}
-            mi, mo, ci = ix["make"], ix["model"], ix.get("cylinder_capacity")
+            mi, mo, ci, fi = ix["make"], ix["model"], ix.get("cylinder_capacity"), ix.get("first_use_date")
             for line in f:
                 p = line.rstrip("\n").split("|")
                 if len(p) == len(cols):
-                    cnt[(p[mi].strip().upper(), first_word(p[mo]), cc10(p[ci]) if ci is not None else 0)] += 1
+                    k = (p[mi].strip().upper(), first_word(p[mo]), cc10(p[ci]) if ci is not None else 0)
+                    cnt[k] += 1
+                    fy = p[fi][:4] if fi is not None else ""
+                    if fy.isdigit() and 1900 < int(fy) < 2100:
+                        fu_cnt[k][int(fy)] += 1
     # 1 + 2: (make, normalised word) -> clusters of engine sizes
     spell = defaultdict(Counter)                 # (make, nword) -> spelling counts
     sizes = defaultdict(Counter)                 # (make, nword) -> cc counts
@@ -211,13 +248,33 @@ def build_families(paths):
         sp = members[fam]
         named = [w for w, _ in sp.most_common() if re.search(r"\d", w)]
         FAMILY[key] = (named[0] if named and sp[named[0]] >= 0.05 * sum(sp.values()) else sp.most_common(1)[0][0], fam[2])
+    fam_years = defaultdict(Counter)
+    for key, (name, c) in FAMILY.items():
+        fam_years[(key[0], name, c)].update(fu_cnt.get(key, {}))
+    for fk, ys in fam_years.items():
+        e = find_eras(ys)
+        if e:
+            ERAS[fk] = e
+    print(f"families split into generations: {len(ERAS)}", flush=True)
     return len(cnt)
 
 
-def model_key(make, model, cc):
+def model_key(make, model, cc, fu=None):
+    """(make, "NAME|cc"), or "NAME|cc|from-to" when the name covers several generations (see find_eras)."""
     mk, fw, c = (make or "").strip().upper(), first_word(model), cc10(cc)
     fam, c = FAMILY.get((mk, fw, c), (fw, c))
-    return mk, f"{fam}|{c}" if fam else ""
+    if not fam:
+        return mk, ""
+    eras = ERAS.get((mk, fam, c))
+    if eras:
+        pick = None
+        if fu:
+            # the era this year falls in, or the nearest one (a stray 1995 record between two generations)
+            pick = min(eras, key=lambda e: 0 if e[0] <= fu <= e[1] else min(abs(fu - e[0]), abs(fu - e[1])))
+        else:
+            pick = eras[-1]
+        return mk, f"{fam}|{c}|{pick[0]}-{pick[1]}"
+    return mk, f"{fam}|{c}"
 
 
 def cc_band(cc):
@@ -285,15 +342,15 @@ def main():
                 if k:
                     fails[tid].add((k, part, cat))
         for tid, (vid, p) in keep.items():
-            mk, mkey = model_key(p[ix["make"]], p[ix["model"]], p[ix["cylinder_capacity"]] if "cylinder_capacity" in ix else None)
-            if not mkey or mkey.split("|")[0] in ("UNCLASSIFIED", "UNKNOWN", "OTHER", "MODELMISSING"):
-                continue
-            failed = p[ix["test_result"]] in ("F", "PRS")
             try:
                 fu = int(p[ix["first_use_date"]][:4])
                 age = int(year) - fu
             except (ValueError, IndexError):
                 fu, age = None, None
+            mk, mkey = model_key(p[ix["make"]], p[ix["model"]], p[ix["cylinder_capacity"]] if "cylinder_capacity" in ix else None, fu)
+            if not mkey or mkey.split("|")[0] in ("UNCLASSIFIED", "UNKNOWN", "OTHER", "MODELMISSING"):
+                continue
+            failed = p[ix["test_result"]] in ("F", "PRS")
             try:
                 miles = int(float(p[ix["test_mileage"]]))
             except (ValueError, IndexError):
@@ -348,7 +405,7 @@ def main():
     con = sqlite3.connect(DB + ".part")
     con.executescript("""
     create table models (make TEXT, model_key TEXT, model TEXT, cc INT, cc_band TEXT, tests INT, vehicles INT, fail_rate REAL,
-      median_miles INT, PRIMARY KEY (make, model_key));
+      median_miles INT, year_from INT, year_to INT, era TEXT, PRIMARY KEY (make, model_key));
     create table model_parts (make TEXT, model_key TEXT, kind TEXT, part TEXT, category TEXT, tests INT, rate REAL);
     create table model_bands (make TEXT, model_key TEXT, band_type TEXT, band TEXT, tests INT, fail_rate REAL);
     create table model_years (make TEXT, model_key TEXT, first_use_year INT, tests INT, fail_rate REAL, median_miles INT);
@@ -379,8 +436,19 @@ def main():
         for nm, k in st["names"].most_common(25):
             con.execute("insert into model_trims values (?,?,?,?)", (mk, mkey, nm, k))
         cb = st["cc"].most_common(1)[0][0] if st["cc"] else None
-        con.execute("insert into models values (?,?,?,?,?,?,?,?,?)",
-                    (mk, mkey, name, int(mkey.split("|")[1]) or None, cb, st["tests"], len(st["vehicles"]), st["fails"] / st["tests"], med(st["miles"])))
+        # the years most of its bikes were first registered (10th to 90th percentile of its MOTs)
+        yc = sorted((y, v[0]) for y, v in st["year"].items())
+        n, run, y10, y90 = sum(v for _, v in yc), 0, None, None
+        for y, v in yc:
+            run += v
+            if y10 is None and run >= 0.1 * n:
+                y10 = y
+            if y90 is None and run >= 0.9 * n:
+                y90 = y
+        parts = mkey.split("|")
+        con.execute("insert into models values (?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (mk, mkey, name, int(parts[1]) or None, cb, st["tests"], len(st["vehicles"]), st["fails"] / st["tests"], med(st["miles"]),
+                     y10, y90, parts[2] if len(parts) > 2 else None))
         write("model", (mk, mkey), st)
         for y, (t, fl, ms) in st["year"].items():
             if t >= 10:
