@@ -117,7 +117,7 @@ OVERRIDES = {
  ("Harley-Davidson", "Fxsbse"): "CVO Breakout", ("Harley-Davidson", "Flstnse"): "CVO Softail Deluxe", ("Harley-Davidson", "Flstfse 1690"): "CVO Fat Boy",
  ("Harley-Davidson", "Flhtcuse 1800"): "CVO Ultra Classic Electra Glide", ("Harley-Davidson", "FLHTCUSE6"): "CVO Ultra Classic Electra Glide",
  ("Harley-Davidson", "Flhtkse 1868"): "CVO Limited", ("Harley-Davidson", "Fxstsse 1800"): "CVO Softail Springer",
- ("Harley-Davidson", "Flhtcu Tc"): "Electra Glide Ultra Classic", ("Harley-Davidson", "Ultra Classic Electra Glide"): "Electra Glide Ultra Classic",
+ ("Harley-Davidson", "Flhtcu Tc"): "Electra Glide Ultra Classic", ("Harley-Davidson", "Ultra Limited"): "Electra Glide Ultra Limited", ("Harley-Davidson", "Ultra Classic Electra Glide"): "Electra Glide Ultra Classic",
  ("Harley-Davidson", "Fxcwc 1580"): "Rocker C", ("Harley-Davidson", "Flhrxs"): "Road King Special", ("Harley-Davidson", "Vrscb 1130"): "V-Rod (VRSCB)",
  ("Harley-Davidson", "Vrscr 1130"): "Street Rod (VRSCR)", ("Harley-Davidson", "Fxst"): "Softail Standard", ("Harley-Davidson", "Flst"): "Heritage Softail",
  ("Harley-Davidson", "FX"): "Super Glide FX", ("Harley-Davidson", "FX1200"): "Super Glide FX", ("Harley-Davidson", "FXE1200"): "Super Glide (FXE)",

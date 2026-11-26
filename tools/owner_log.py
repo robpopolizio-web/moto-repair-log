@@ -51,8 +51,11 @@ def main():
         if bid in url_of_id:
             names[mk].setdefault(key(md), url_of_id[bid])
 
-    def match(make, model):
+    def match(make, model, year=None):
         cands = names.get(make, {})
+        if make == "Harley-Davidson" and key(model) in ("ultra", "ultraglide"):
+            # "Ultra" on r/Harley = the top Electra Glide: Ultra Classic to 2013, Ultra Limited from 2014
+            return cands.get("electraglideultraclassic" if year and year <= 2013 else "electraglideultralimited", "")
         tries = [model, re.sub(r"\s*\(.*?\)", "", model), re.sub(r"^.*\((.*)\).*$", r"\1", model),
                  display(make, model), re.sub(r"\s+(gen \d+|\d{4})$", "", model, flags=re.I)]
         for t in tries:
@@ -70,7 +73,7 @@ def main():
                  owner TEXT, type TEXT, miles INT, mileage_type TEXT, part TEXT, notes TEXT, source TEXT, source_url TEXT)""")
     unmatched = Counter()
     for e in entries:
-        url = match(e["brand"], e["model"])
+        url = match(e["brand"], e["model"], int(e["year"]) if e["year"].isdigit() else None)
         if not url:
             unmatched[(e["brand"], e["model"])] += 1
         try:

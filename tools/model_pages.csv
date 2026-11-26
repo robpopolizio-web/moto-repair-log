@@ -571,10 +571,10 @@ url,make,model,bike_ids
 /harley-davidson/heritage-softail-classic/,Harley-Davidson,Heritage Softail Classic,1246 1247 1248 1249
 /harley-davidson/street-glide/,Harley-Davidson,Street Glide,1355 1356 1357 1358
 /harley-davidson/road-king/,Harley-Davidson,Road King,1284 1285 1286 1287
+/harley-davidson/electra-glide-ultra-limited/,Harley-Davidson,Electra Glide Ultra Limited,1118 1119 1373
 /harley-davidson/road-king-classic/,Harley-Davidson,Road King Classic,1288 1289 1290 1291
 /harley-davidson/electra-glide-classic/,Harley-Davidson,Electra Glide Classic,1109 1110 1111 1112
 /harley-davidson/road-glide/,Harley-Davidson,Road Glide,1277 1278 1279
-/harley-davidson/electra-glide-ultra-limited/,Harley-Davidson,Electra Glide Ultra Limited,1118 1119
 /harley-davidson/dyna-wide-glide/,Harley-Davidson,Dyna Wide Glide,1103 1104 1105
 /harley-davidson/v-rod/,Harley-Davidson,V-Rod,1375 1376
 /harley-davidson/dyna-street-bob/,Harley-Davidson,Dyna Street Bob,1093 1094 1095
@@ -603,7 +603,6 @@ url,make,model,bike_ids
 /harley-davidson/softail-deuce/,Harley-Davidson,Softail Deuce,1323
 /harley-davidson/low-rider/,Harley-Davidson,Low Rider,1255 1256 1257
 /harley-davidson/heritage-classic/,Harley-Davidson,Heritage Classic,1242 1243 1244
-/harley-davidson/ultra-limited/,Harley-Davidson,Ultra Limited,1373
 /harley-davidson/police-road-king/,Harley-Davidson,Police Road King,1272
 /harley-davidson/softail-slim/,Harley-Davidson,Softail Slim,1155 1324
 /harley-davidson/cvo-street-glide/,Harley-Davidson,CVO Street Glide,1074 1212 1213
@@ -1645,9 +1644,6 @@ url,make,model,bike_ids
 /arcimoto/roadster/,Arcimoto,Roadster,175
 /arcimoto/deliverator/,Arcimoto,Deliverator,171
 /arcimoto/rapid-responder/,Arcimoto,Rapid Responder,174
-/polaris/slingshot/,Polaris,Slingshot,3518
-/polaris/victory-unspecified/,Polaris,Victory (unspecified),3520
-/polaris/slingshot-s/,Polaris,Slingshot S,3515
 /baotian/bt49qt/,Baotian,BT49QT,449
 /baotian/bt125t/,Baotian,BT125T,448
 /baotian/bt50qt/,Baotian,BT50QT,450
@@ -1694,13 +1690,11 @@ url,make,model,bike_ids
 /vincent/rapide-1000/,Vincent,Rapide 1000,4503
 /ariel/arrow-250/,Ariel,Arrow 250,180
 /ariel/leader-250/,Ariel,Leader 250,185
-/vanderhall/carmel/,Vanderhall,Carmel,4367
-/vanderhall/venice/,Vanderhall,Venice,4368
 /qingqi/qm125/,Qingqi,QM125,3535
 /jinlun/jl125/,Jinlun,JL125,2201 2203
+/polaris/victory-unspecified/,Polaris,Victory (unspecified),3520
 /zontes/zt125/,Zontes,ZT125,5000
 /huoniao/hn125/,Huoniao,HN125,2011
-/zap/xebra/,Zap,Xebra,4954
 /mutt/mongrel-125/,Mutt,Mongrel 125,3225
 /skyjet/sj125/,Skyjet,SJ125,3786
 /puch/mini-maxi-50/,Puch,Mini-Maxi 50,3523
@@ -1732,7 +1726,5 @@ url,make,model,bike_ids
 /cpi/oliver-50/,CPI,Oliver 50,683
 /bullit/hero-125/,Bullit,Hero 125,585
 /chunfeng/scooter/,Chunfeng,Scooter,671
-/taotao/atm50-a/,Taotao,ATM50-A,4125
-/ic/zhejiang-xingyue-unspecified/,IC,Zhejiang Xingyue (unspecified),2093
 /livewire/s2-del-mar/,LiveWire,S2 Del Mar,2990
 /brammo/empulse/,Brammo,Empulse,540

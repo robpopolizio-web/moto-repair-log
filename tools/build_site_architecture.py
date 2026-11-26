@@ -173,6 +173,9 @@ def main():
     us_years = defaultdict(set)
     for mk, fam, y, camp in n.execute("select make, model_family, year, campaign from recalls"):
         us_years[(mk, fam)].add((y, camp))
+    bt_csv = os.path.join(ROOT, "tools", "bike_types.csv")
+    not_bikes = {r["url"] for r in csv.DictReader(open(bt_csv)) if r["basis"].startswith("not a motorcycle")} \
+        if os.path.exists(bt_csv) else set()
     groups = defaultdict(lambda: {"ids": [], "mot": 0, "complaints": 0, "gens": [], "raw": []})
     for bid, mk, model, mot, cpl, origin in c.execute(
             "select bike_id, make, model, mot_tests, us_complaints, origin from bikes"):
@@ -180,6 +183,8 @@ def main():
             continue
         if re.search(r"[/,]", model):        # NHTSA families naming several models: their records sit on each model
             continue
+        if f"/{slug(make_display(mk))}/{slug(base_name(model))}/" in not_bikes:
+            continue                         # ATVs and three-wheeled cars: no page (owner's call, 2026-11-26)
         g = groups[(make_display(mk), display(mk, base_name(model)))]
         g["raw"].append(base_name(model))
         g["ids"].append(bid); g["mot"] += mot or 0; g["complaints"] += cpl or 0
@@ -258,9 +263,9 @@ def main():
         add(f"{mk} reliability", f"/{bslug}/", "Brand page (category hub)", f"{mk.lower()} reliability",
             f"{mk} reliability: problems and recalls by model",
             f"{mk} Reliability: Problems and Recalls by Model",
-            f"What breaks on {len(mlist)} {mk} models, at what mileage, and which years were recalled. Official records, each labelled by source.",
+            f"What breaks on {len(mlist)} {mk} model{'s' * (len(mlist) != 1)}, at what mileage, and which years were recalled. Official records, each labelled by source.",
             "To build (wave 1)" if any((mk, m) in WAVE1 for m in mlist) else "Planned",
-            f"{len(mlist)} model pages. Secondary keyword: is {mk.lower()} reliable.", parent="Home")
+            f"{len(mlist)} model page{'s' * (len(mlist) != 1)}. Secondary keyword: is {mk.lower()} reliable.", parent="Home")
     for mk in sorted(brands, key=lambda b: -len(brands[b])):
         bslug = slug(mk)
         for md in brands[mk]:
