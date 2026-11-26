@@ -75,6 +75,8 @@ def mine(nhtsa_db, eu_db=None):
         codes = listed | {norm_code(f) for f in coded} | ({norm_code(f) for f in fams if is_code(f)} if not named else set())
         # the model names: the campaign's one named model, or else names in brackets after the codes
         # ("ZR900C, ZR900E and ZR900N (Z900RS ABS, Z900RS CAFE ABS, and Z900RS SE ABS)")
+        if len(listed) > 4:
+            continue        # a recall of many models filed under one says nothing about each code (24V113000)
         if len(named) == 1:
             names = named
         elif not named and head.count("(") == 1:
@@ -141,6 +143,10 @@ CURATED = [
     ("Kawasaki", "ZR1000F", "Z1000", "Z1000 2014-2020"),
     ("Kawasaki", "ZR1000G", "Z1000", "Z1000 R Edition"),
     ("Honda", "CRF1000L", "Africa Twin", "CRF1000L is the Africa Twin; the Adventure Sports is CRF1000L2 / CRF1000A2"),
+    ("Yamaha", "VMX12", "Vmax 1200", "the 1985-2007 V-Max 1200; VMX12C / VMX12NC are in the VIN series"),
+    ("Kawasaki", "ZR750J", "Z750", "Z750 2004-2006 (the Z750S is ZR750K)"),
+    ("Kawasaki", "ZR750L", "Z750", "Z750 2007-2012"),
+    ("Kawasaki", "ZR750", "Z750", "bare ZR750 records: the 2004-2012 Z750 is by far the most common ZR750"),
     ("Kawasaki", "ZR800*", "Z800", "every ZR800 is a Z800 (2013-2016): ZR800A/B/C/D/F"),
     ("Kawasaki", "ZX1400B", "Ninja ZX-14", "ZZR1400 ABS 2006-2007 (ZX1400A/C are in the VIN series)"),
 ]
@@ -151,18 +157,29 @@ class CodeMap:
     ZX1000C -> Ninja ZX-10R while ZX1000G -> Ninja 1000. A code whose learned names disagree is skipped.
     Codes whose name has no bike of its own (ZR900C = Z900RS) are kept in `labels` to name that bike."""
 
-    def __init__(self, pairs, resolve, base=lambda s: s.upper(), make_key=lambda s: (s or "").upper()):
+    def __init__(self, pairs, resolve, base=lambda s: s.upper(), make_key=lambda s: (s or "").upper(), owned=lambda key: False,
+                 same=lambda key, name: "".join(key[1]) == norm_code(name)):
+        """owned(key): the bike is a US model with its own complaints. A code that already names such a model
+        (CBR600RR, VFR800) stays with it, whatever a recall list or one owner's VIN says."""
         # resolve(make, name) -> bike key or None: names must belong to a bike we have
         votes, lab = defaultdict(Counter), defaultdict(Counter)
         self.evidence = defaultdict(list)
         pairs = list(pairs) + [(mk, c, nm, "curated: " + why, 3) for mk, c, nm, why in CURATED]
+        self_named = {}
         for mk, code, name, src, w in pairs:
             if len(code) < 3:
+                continue
+            if (mk, code) not in self_named:
+                k0 = resolve(mk, code)
+                self_named[(mk, code)] = k0 if (k0 is not None and owned(k0)) else None
+            if self_named[(mk, code)] is not None:
                 continue
             # "NINJA" next to ZX10R means the Ninja ZX-10R, not the bike called Ninja
             key = resolve(mk, f"{name} {code}")
             if key is None or code not in "".join(key[1]):
                 key = resolve(mk, name)
+            if src.startswith("curated") and key is not None and not same(key, name):
+                key = None        # a checked name joins only the model of exactly that name (Z750 is not the Z750S)
             mkk = make_key(mk or "")
             if key is None:
                 # a model with no bike of its own, but a US recall filed under the code (ZR900C = Z900RS)
@@ -204,6 +221,22 @@ class CodeMap:
         if short != joined:
             out.append(short)
         return out
+
+    def label_of(self, make_k, joined):
+        """The name a code stands for when that model has no US page (ZR750L -> Z750, ZR800CDS -> Z800)."""
+        best = None
+        for (mk, code), name in self.labels.items():
+            c = code.rstrip("*")
+            if mk != make_k or not joined.startswith(c) or len(joined) - len(c) > 5:
+                continue
+            tail = joined[len(c):]
+            if tail[:1].isdigit() and c[-1:].isdigit():
+                continue
+            if mk == "KAWASAKI" and c[-1:].isdigit() and tail[:1].isalpha() and not code.endswith("*"):
+                continue
+            if best is None or len(c) > len(best[0]):
+                best = (c, name)
+        return best
 
     @staticmethod
     def code_part(tokens):

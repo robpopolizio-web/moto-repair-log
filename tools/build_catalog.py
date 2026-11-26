@@ -26,6 +26,7 @@ from collections import Counter, defaultdict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from world_sources import tok, make_key  # noqa: E402
 import factory_codes  # noqa: E402
+import mot_build  # noqa: E402   (its DVSA name rules: first_word)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NHTSA = os.path.join(ROOT, "data", "nhtsa", "motorcycles.sqlite")
@@ -62,6 +63,18 @@ VARIANT_SUFFIX = {
 # A UK MOT family whose bikes were first registered 8+ years before (or after) every year of a model is an
 # older (or newer) generation that shares the name: the 1970s Z900 is not the 2017 Z900.
 ERA_GAP = 8
+# UK factory-code pages under the name riders use (the code stays in the name for search)
+KNOWN_AS = {("HONDA", "XL1000V"): "Varadero XL1000V", ("HONDA", "NT650V"): "Deauville NT650V",
+            ("HONDA", "NT700V"): "Deauville NT700V", ("HONDA", "XL650V"): "Transalp XL650V",
+            ("HONDA", "XL600V"): "Transalp XL600V", ("HONDA", "XL700V"): "Transalp XL700V",
+            ("HONDA", "CB600F"): "Hornet CB600F", ("HONDA", "CBF125M"): "CBF125", ("HONDA", "FJS600"): "Silver Wing FJS600",
+            ("YAMAHA", "YZF1000"): "Thunderace YZF1000R", ("YAMAHA", "YP250"): "Majesty YP250",
+            ("KAWASAKI", "ER650"): "ER-6n", ("SUZUKI", "GSF650"): "Bandit 650"}
+# UK MOT families whose records only give a shared word, told apart by engine size (checked by hand against
+# the records' own spellings: SPEED at 860 cc is 75% "SPEEDMASTER" / "SPEED MASTER 865")
+FAMILY_RULES = [("TRIUMPH", "SPEED", 850, 870, "Speedmaster"), ("TRIUMPH", "SPEED", 780, 800, "Speedmaster"),
+                ("TRIUMPH", "SPEED", 870, 970, "Speed Triple"), ("TRIUMPH", "SPEED", 740, 760, "Speed Triple"),
+                ("TRIUMPH", "SPEED", 1190, 1210, "Speed Twin")]
 # names that start like another model's but are a different bike (Z900RS is not a trim of the Z900)
 SEPARATE = {"KAWASAKI": {"Z900RS", "Z650RS"}, "TRIUMPH": {"SPEEDTWIN", "SPEEDTRIPLE"}}
 # Harley-Davidson factory codes (used by DVSA, DfT and often Transport Canada) -> model names.
@@ -118,13 +131,16 @@ def engine_number(t):
 def main():
     n = sqlite3.connect(NHTSA)
     n.row_factory = sqlite3.Row
+    if os.path.exists(OUT + ".part"):
+        os.remove(OUT + ".part")          # left by a failed run
     out = sqlite3.connect(OUT + ".part")
     out.executescript("""
     create table bikes (bike_id INTEGER PRIMARY KEY, make TEXT, model TEXT, slug TEXT, cc INT, origin TEXT,
       us_complaints INT DEFAULT 0, us_recalls INT DEFAULT 0, world_recalls INT DEFAULT 0, mot_tests INT DEFAULT 0,
       uk_licensed INT DEFAULT 0, investigations INT DEFAULT 0, first_year INT, last_year INT);
     create table aliases (bike_id INT, source TEXT, source_make TEXT, source_model TEXT, source_cc INT, rule TEXT);
-    create table bike_us_models (bike_id INT, make TEXT, model_family TEXT);
+    create table bike_us_models (bike_id INT, make TEXT, model_family TEXT, year_from INT, year_to INT);
+    create table bike_family_members (family_bike_id INT, member_bike_id INT);
     create table bike_mot (bike_id INT, make TEXT, model_key TEXT, tests INT, rule TEXT);
     create table bike_recalls (bike_id INT, source TEXT, country TEXT, campaign TEXT, foreign_model TEXT, rule TEXT);
     create table bike_investigations (bike_id INT, action TEXT);
@@ -135,14 +151,16 @@ def main():
     bikes = {}            # (make_key, base tokens tuple) -> bike dict
     index = defaultdict(list)   # make_key -> [(base tokens, bike key)]
 
-    def add_bike(mk_disp, model_disp, origin, cc=None, era=None):
-        """era=(from, to) makes an older generation its own bike: it is never matched by name, only by its MOTs."""
-        key = (make_key(mk_disp), tuple(base_tokens(tok(model_disp))) + ((f"@{era[0]}",) if era else ()))
+    def add_bike(mk_disp, model_disp, origin, cc=None, era=None, umbrella=None):
+        """era=(from, to) makes an older generation its own bike: it is never matched by name, only by its MOTs.
+        umbrella=[bike keys]: UK records that only say "R1150" or "SPRINT" and fit several models: a family page."""
+        key = (make_key(mk_disp), tuple(base_tokens(tok(model_disp))) + ((f"@{era[0]}",) if era else ()) + (("@ALL",) if umbrella else ()))
         if key not in bikes:
             bikes[key] = {"make": mk_disp, "model": model_disp, "origin": origin, "cc": cc, "names": Counter(),
                           "us": [], "mot": [], "rec": [], "inv": set(), "fleet": [0, 0, None], "years": set(),
-                          "us_complaints": 0, "us_recalls": set(), "aliases": [], "era": era, "mot_years": []}
-            if not era:
+                          "us_complaints": 0, "us_recalls": set(), "aliases": [], "era": era, "mot_years": [],
+                          "umbrella": list(umbrella) if umbrella else None}
+            if not era and not umbrella:
                 index[key[0]].append((list(key[1]), key))
         return key
 
@@ -167,13 +185,14 @@ def main():
         b = bikes[key]
         if len(tok(fam)) < len(tok(b["model"])):
             b["model"] = fam
-        b["us"].append((mk, fam))
+        b["us"].append((mk, fam, None, None))
         b["us_complaints"] += f["complaints"]
         b["us_recalls"] |= f.get("camps", set())
         b["years"] |= f["years"]
         b["aliases"].append(("NHTSA", mk, fam, None, "same name" if tuple(base_tokens(t)) == tuple(t) else "trim of " + " ".join(base_tokens(t)).title()))
 
     codes = None          # factory codes, learned once the US models exist (below)
+    famy = {}             # UK MOT family -> (first-use year from, to)
 
     def find(make, model, cc=None, use_codes=True):
         """Bike key for a source name, or (None, reason)."""
@@ -252,6 +271,7 @@ def main():
                 if fit:
                     starts = set(fit)
             if len(starts) >= 2:
+                find.cands = list(starts)
                 return None, "fits several models: " + ", ".join(sorted(bikes[k]["model"] for k in starts)[:4])
             return None, "no matching model"
         key, rule = hit
@@ -264,7 +284,8 @@ def main():
     pairs = factory_codes.mine(NHTSA, EU if os.path.exists(EU) else None)
     codes = factory_codes.CodeMap(pairs, lambda mk, nm: find(mk, nm, use_codes=False)[0],
                                   base=lambda nm: " ".join(w for w in nm.split() if w.upper() not in TRIM_WORDS | {"CAFÉ"}) or nm,
-                                  make_key=make_key)
+                                  make_key=make_key, owned=lambda k: k in bikes and bikes[k]["us_complaints"] > 0,
+                                  same=lambda k, nm: list(k[1]) == base_tokens(tok(nm)))
     print(f"factory codes learned: {len(codes.map)} linked to a model, {len(codes.labels)} naming a model of their own")
 
     # ---- 2. UK MOT families
@@ -295,6 +316,32 @@ def main():
         era_kids = defaultdict(list)    # bike -> its older/newer generations
 
         def link(mk, mkey, model, cc, tests, y0, y1, last):
+            famy[(mk, mkey)] = (y0, y1)
+            # 0a. a shared word told apart by engine size (FAMILY_RULES)
+            for rmk, rname, lo, hi, target in FAMILY_RULES:
+                if make_key(mk) == rmk and model.strip().upper() == rname and cc and lo <= cc <= hi:
+                    k0 = add_bike(MAKE_DISPLAY.get(rmk, rmk.title()), target, "UK MOT", cc)
+                    if other_era(k0, y0, y1):
+                        break
+                    bikes[k0]["mot"].append((mk, mkey, tests, f"family rule {rname} {lo}-{hi} cc = {target}"))
+                    if y0 and y1:
+                        bikes[k0]["mot_years"].append((y0, y1))
+                    bikes[k0]["cc"] = bikes[k0]["cc"] or cc
+                    return True
+            # 0. a factory code that names a model with no US page (ZR750L = Z750)
+            fj = codes.code_part(tok(model))
+            if factory_codes.is_code(fj) and not codes.lookup(make_key(mk), fj):
+                lb = codes.label_of(make_key(mk), fj)
+                if lb:
+                    # exactly that model (add_bike returns it when it exists): Z750, not the Z750S that "Z750" also starts
+                    k0 = add_bike(MAKE_DISPLAY.get(make_key(mk), make_key(mk).title()), lb[1], "UK MOT", cc)
+                    b0 = bikes[k0]
+                    b0["mot"].append((mk, mkey, tests, f"factory code {lb[0]} = {lb[1]}"))
+                    if y0 and y1:
+                        b0["mot_years"].append((y0, y1))
+                    b0["cc"] = b0["cc"] or cc
+                    b0["aliases"].append(("UK MOT", mk, model, cc, f"factory code {lb[0]} = {lb[1]}"))
+                    return True
             # 1. vote: match each full DVSA name in the family ("STREET TRIPLE R", "FLHX STREET GLIDE")
             votes, matched, by_code = Counter(), 0, Counter()
             fam_tokens = tok(model)
@@ -328,7 +375,7 @@ def main():
                     j = model.strip() + str(size)
                     lab = [nm for (m2, c), nm in codes.labels.items() if m2 == make_key(mk) and (c == j or (c.endswith("*") and j.startswith(c[:-1])))]
                     if lab:   # a code naming a model with no US page yet: "ZR" at 810 cc is the Z800
-                        key = find(mk, lab[0], cc)[0] or add_bike(MAKE_DISPLAY.get(make_key(mk), make_key(mk).title()), lab[0], "UK MOT", cc)
+                        key = add_bike(MAKE_DISPLAY.get(make_key(mk), make_key(mk).title()), lab[0], "UK MOT", cc)
                         rule = f"factory code {j} = {lab[0]}"
                         break
             # 2. the family name itself, with its engine size when the name has no number
@@ -384,7 +431,13 @@ def main():
                 rule = f"generation {y0}-{y1} of {b0['model']}"
             if not key and not last and rule.startswith("fits several"):
                 return False   # retry once every named model has its engine size from its own records
-            name_only = rule in ("no matching model", "no model with this engine size") and len(re.sub(r"[^A-Z]", "", model.upper())) >= 3
+            name_only = rule in ("no matching model", "no model with this engine size") and \
+                len(re.sub(r"[^A-Z]", "", model.upper())) >= (1 if cc else 3)      # "SH" at 125 cc is the Honda SH125
+            if not key and last and rule.startswith("fits several") and tests >= 100:
+                # the records only say "R1150" or "SPRINT": a family page linking the models it can be
+                disp_mk = MAKE_DISPLAY.get(make_key(mk), " ".join(w.capitalize() for w in make_key(mk).split()))
+                disp = model if re.search(r"\d", model) else f"{model.title() if model.isupper() and len(model) > 4 else model} {cc}"
+                key, rule = add_bike(disp_mk, disp, "UK MOT family", cc, umbrella=getattr(find, "cands", [])), "family of several models"
             if not key:
                 if tests >= 100 and (re.search(r"\d", model) or rule == "different model word" or name_only) and not rule.startswith("fits several"):
                     disp_mk = MAKE_DISPLAY.get(make_key(mk), " ".join(w.capitalize() for w in make_key(mk).split()))
@@ -413,13 +466,35 @@ def main():
         for r in later:
             link(*r, last=True)
 
+    # code-named US models take the name their code stands for, findable by it from here on (ZR900C -> Z900RS)
+    for k, b in list(bikes.items()):
+        j = "".join(k[1])
+        if b.get("era") or b.get("umbrella") or not factory_codes.is_code(j) or codes.lookup(k[0], j):
+            continue
+        lb = codes.label_of(k[0], j)
+        if lb:
+            index[k[0]].append((base_tokens(tok(lb[1])), k))
+
+    def find_any(make, name):
+        """A recall's model text: as written, without its brackets, or the code in them ("ROAD STAR (XV1600)")."""
+        tries = [name]
+        if "(" in name:
+            tries += [re.sub(r"\(.*?\)", " ", name).strip()] + re.findall(r"\((.*?)\)", name)
+        rule = ""
+        for t in tries:
+            if t.strip():
+                key, rule = find(make, t)
+                if key:
+                    return key, rule
+        return None, rule
+
     # ---- 3. recalls from other countries, investigations, UK fleet
     for src, country, camp, mk, model in n.execute("select source, country, campaign, make, model from world_recalls"):
         names = [x.strip() for x in re.split(r"\s*/\s*|\n|,\s*", model or "") if x.strip()] or [model or ""]
         done = set()
         for name in names:
             for mm in (mk or "").split("/"):
-                key, rule = find(mm, name)
+                key, rule = find_any(mm, name)
                 if key and key not in done:
                     done.add(key)
                     bikes[key]["rec"].append((src, country, camp, name, rule))
@@ -430,15 +505,27 @@ def main():
         key, rule = find(mk, model)
         if key:
             bikes[key]["inv"].add(act)
+    fleet_left = defaultdict(lambda: [0, 0, None])
     for mk, gen, model, lic, sorn, q in n.execute("select make, gen_model, model, licensed, sorn, quarter from uk_fleet"):
-        key, rule = find(mk, model)
+        clean = re.sub(r"\b(E[345]5?|EURO ?[345])\b", "", model or "", flags=re.I).strip()     # emission tags
+        key, rule = find(mk, clean)
+        if not key:
+            # DVLA writes Honda-style codes with ABS and year letters: "CBF 125 NA-J" = CBF125N, "NC 750 XA-P" = NC750X
+            fw = mot_build.first_word(clean)
+            if fw and fw != "".join(tok(clean)):
+                key, rule = find(mk, fw)
         if not key and gen.upper().startswith(mk.upper()):
             key, rule = find(mk, gen[len(mk):])
         if key:
             f = bikes[key]["fleet"]
             f[0] += lic or 0; f[1] += sorn or 0; f[2] = q
         elif (lic or 0) >= 200 and "MODEL MISSING" not in (model or "").upper():
-            out.execute("insert into unassigned values (?,?,?,?,?,?)", ("UK fleet", mk, model, None, "licensed bikes", lic))
+            fleet_left[(make_key(mk), clean.upper())][0] += lic or 0
+            fleet_left[(make_key(mk), clean.upper())][1] += sorn or 0
+            fleet_left[(make_key(mk), clean.upper())][2] = q
+    # what is left is mostly models too new for an MOT (first test at 3 years) and not sold in the US
+    for (mk, model), (lic, sorn, q) in sorted(fleet_left.items(), key=lambda kv: -kv[1][0]):
+        out.execute("insert into unassigned values (?,?,?,?,?,?)", ("UK fleet", mk, model, None, "licensed bikes", lic))
 
     # ---- EU Safety Gate
     if os.path.exists(EU):
@@ -477,7 +564,13 @@ def main():
             j = re.sub(pat, rep, j)
         return j
 
+    fwd = {}      # merged bike -> the bike it went into
+
     def merge_into(dst, src):
+        for k_, v_ in list(bikes.items()):
+            if v_ is src:
+                fwd[k_] = next(k2 for k2, v2 in bikes.items() if v2 is dst)
+                break
         for f in ("us", "mot", "rec", "aliases", "mot_years"):
             dst[f] += src[f]
         for f in ("inv", "years", "us_recalls"):
@@ -523,7 +616,7 @@ def main():
         by = defaultdict(dict)
         ctoks = {}
         for key, b in bikes.items():
-            if b.get("era"):          # an older generation keeps its own page
+            if b.get("era") or b.get("umbrella"):     # an older generation or a family page keeps its own page
                 continue
             by[make_key(b["make"])].setdefault(canon(b), []).append(key)
             ctoks[key] = [w for w in base_tokens(tok(re.sub(r"\(.*?\)", " ", b["model"]))) if w != "REDUNDANT"]
@@ -567,12 +660,205 @@ def main():
                 merge_into(bikes[keep], bikes.pop(k))
                 merged += 1
     print(f"merged {merged} duplicate names")
+
+    def follow(k):
+        seen = set()
+        while k in fwd and k not in seen:
+            seen.add(k); k = fwd[k]
+        return k
+
+    # ---- 5. family pages whose models turned out to be one bike after merging fold into it
+    for k in [k for k, b in bikes.items() if b.get("umbrella")]:
+        members = {follow(m) for m in bikes[k]["umbrella"]} & set(bikes)
+        if len(members) == 1:
+            dst = next(iter(members))
+            merge_log.append((bikes[k]["make"], bikes[k]["model"], bikes[dst]["model"]))
+            u = bikes.pop(k); u["umbrella"] = None
+            merge_into(bikes[dst], u)
+        else:
+            bikes[k]["umbrella"] = sorted(members)
+
+    # ---- 6. one engine size per page
+    # A page whose UK records come in clearly different engine sizes (Gold Wing GL1000 ... GL1800, Tiger 800 /
+    # 955 / 1200, Africa Twin CRF1000 / CRF1100) is split: each size joins the model with that number in its
+    # name, or gets its own page. US complaints and recalls follow by model year when the years do not overlap.
+    cyears = defaultdict(Counter)            # (make, US family) -> model year -> complaints
+    for mk_, fam_, y_, k_ in n.execute("select make, model_family, year, count(*) from complaints group by 1, 2, 3"):
+        cyears[(mk_, fam_)][y_] += k_
+    ryears = defaultdict(set)               # (make, US family) -> {(model year, campaign)}
+    for mk_, fam_, y_, c_ in n.execute("select make, model_family, year, campaign from recalls"):
+        ryears[(mk_, fam_)].add((y_, c_))
+
+    def fcc(x):
+        return int(x[1].split("|")[1] or 0)
+
+    def no_number(name):
+        return re.sub(r"\s*\b\d{2,4}\b", "", name).strip()
+
+    def nice(name):           # "AGILITY" -> "Agility", "K SERIES" -> "K Series"; codes stay as written
+        return " ".join(w.capitalize() if w.isalpha() and w.isupper() and len(w) > 2 else w for w in name.split())
+
+    def words(tokens):        # tokens without engine numbers: F 650 GS -> F GS
+        return [t for t in tokens if not t.isdigit() and not t.startswith("@")]
+
+    split_log = []
+    for key in list(bikes):
+        b = bikes.get(key)
+        if not b or b.get("umbrella") or len(b["mot"]) < 2:
+            continue
+        tot = sum(x[2] for x in b["mot"])
+        clusters = []
+        def era_of(x):
+            return famy.get((x[0], x[1])) or (None, None)
+        for x in sorted(b["mot"], key=lambda x: (fcc(x), era_of(x)[0] or 0)):
+            c, (e0, e1) = fcc(x), era_of(x)
+            # same size within 5%, and not decades apart (Tiger 885 of 1993-2003 vs Tiger 900 of 2020)
+            hit = next((cl for cl in clusters if c and cl["last"] and abs(c - cl["topcc"]) <= 0.05 * c and
+                        not (e0 and cl["e"][0] and (e1 < cl["e"][0] - 5 or e0 > cl["e"][1] + 5))), None)
+            if hit:
+                hit["f"].append(x); hit["last"] = c
+                if x[2] > hit["top"]:
+                    hit["topcc"] = c                            # compared with its biggest family's size and years
+                    if e0:
+                        hit["e"] = (e0, e1)
+                    hit["top"] = x[2]
+            else:
+                clusters.append({"f": [x], "last": c, "e": (e0, e1), "top": x[2], "topcc": c})
+        for cl in clusters:
+            cl["t"] = sum(x[2] for x in cl["f"])
+            top = max(cl["f"], key=lambda x: x[2])
+            cl["cc"], cl["code"] = fcc(top), top[1].split("|")[0]
+            # registration years of its biggest family (stray old records in small ones would stretch it)
+            sp = famy.get((top[0], top[1]))
+            cl["span"] = sp if sp and sp[0] else None
+        big = [cl for cl in clusters if cl["t"] >= 300 and (cl["t"] >= 0.05 * tot or cl["t"] >= 1000) and cl["cc"]]
+        if len(big) < 2:
+            continue
+        main = max(big, key=lambda cl: cl["t"])
+        base = [t for t in key[1] if not t.startswith("@")]
+        en_main = engine_number(base) or engine_number(tok(b["model"]))
+        if en_main and abs(en_main - main["cc"]) > 0.1 * en_main:
+            # the name's own number decides which size is this page (Vision 110 keeps the 110, not the 50)
+            near = [cl for cl in big if abs(cl["cc"] - en_main) <= 0.1 * en_main]
+            if near:
+                main = max(near, key=lambda cl: cl["t"])
+        # a code names the size unless it only repeats the page's number (V-Strom 1000 / DL1000: use its years)
+        named_code = lambda cl: factory_codes.is_code(cl["code"]) and cl["code"] not in "".join(base) and \
+            not (en_main and str(en_main) in cl["code"])
+        parts_ = [(key, main["span"])] if main["span"] else []      # (bike, registration years) of each size
+        renamed_main = False
+        def sibling(cl):
+            best = None
+            for k2, b2 in bikes.items():
+                if k2 == key or b2.get("era") or b2.get("umbrella") or k2[0] != key[0]:
+                    continue
+                t2 = [t for t in k2[1] if not t.startswith("@")]
+                if words(t2) != words(base):     # same name apart from the number: Tiger 1200, F 800 GS
+                    continue
+                e2 = engine_number(t2)
+                if cl["span"] and other_era(k2, *cl["span"]):
+                    continue          # that model is another generation
+                if e2 and abs(e2 - cl["cc"]) <= 0.04 * e2 and (best is None or len(t2) < best[0]):
+                    best = (len(t2), k2)
+            return best
+
+        order = [main] + [cl for cl in big if cl is not main]
+        for cl in order:
+            if cl is main and en_main:
+                continue
+            # 1. a model with this engine size in its name (Tiger at 1220 cc -> Tiger 1200; the Tiger 800 too)
+            dest = None
+            best = sibling(cl)
+            if best:
+                dest = best[1]
+                if cl is main:       # its biggest size has its own model: the next size is this page's own
+                    rest = [c2 for c2 in big if c2 is not main and not sibling(c2)]
+                    keep_ = max(rest, key=lambda c2: c2["t"]) if rest else None
+                    if keep_:
+                        order.remove(keep_)
+            elif cl is main:
+                continue             # the page keeps its biggest size unless a model is named for it
+            else:
+                bm = nice(b["model"])
+                apart = cl["span"] and main["span"] and (cl["span"][1] < main["span"][0] or cl["span"][0] > main["span"][1])
+                other_engine = en_main and abs(cl["cc"] - en_main) > 0.25 * en_main
+                if named_code(cl):          # Gold Wing GL1500, Africa Twin CRF1100
+                    nm = f"{no_number(bm) if en_main else bm} {cl['code']}"
+                elif other_engine:          # Vision 110 -> Vision 50
+                    nm = f"{no_number(bm)} {cl['cc']}"
+                elif apart:                 # another generation: Tiger (1999-2006), V-Strom 1000 (2014-2019)
+                    nm = f"{bm} ({cl['span'][0]}-{cl['span'][1]})"
+                elif en_main:
+                    nm = f"{no_number(bm)} {cl['cc']}"
+                else:                       # sold alongside: X9 (about 460 cc); sizes are recorded to 10 cc
+                    nm = f"{bm} (about {cl['cc']} cc)"
+                dest = add_bike(b["make"], nm, "UK MOT", cl["cc"])
+                if bikes[dest].get("era") or bikes[dest].get("umbrella") or dest == key:
+                    continue
+            d = bikes[dest]
+            for x in cl["f"]:
+                b["mot"].remove(x)
+                d["mot"].append(x[:3] + (x[3] + f"; engine size split from {b['model']}",))
+            d["cc"] = d["cc"] or cl["cc"]
+            if cl["span"]:
+                parts_.append((dest, cl["span"]))
+            split_log.append((b["make"], b["model"], cl["code"], cl["cc"], cl["t"], d["model"]))
+        # US model years go to the size whose UK registration years hold them; the nearest when none does;
+        # the page's own size when several do (Tiger 800 and 1200 were sold side by side)
+        if len(parts_) > 1 and b["us"]:
+            def owner(y):
+                if y is None:
+                    return key
+                inside = [k_ for k_, (a_, z_) in parts_ if a_ <= y <= z_]
+                if len(inside) == 1:
+                    return inside[0]
+                if inside:
+                    return key
+                return min(parts_, key=lambda p_: min(abs(y - p_[1][0]), abs(y - p_[1][1])))[0]
+            newus = defaultdict(list)
+            for mk_, fam_, y0_, y1_ in b["us"]:
+                ys_ = sorted(({y_ for y_ in cyears[(mk_, fam_)]} | {y_ for y_, _ in ryears[(mk_, fam_)]}) - {None})
+                ys_ = [y_ for y_ in ys_ if y_ and (y0_ is None or y_ >= y0_) and (y1_ is None or y_ <= y1_)]
+                if not ys_:
+                    newus[key].append((mk_, fam_, y0_, y1_)); continue
+                # contiguous runs of years with one owner become one range; the ends stay open
+                runs, prev = [], None
+                for y_ in ys_:
+                    o_ = owner(y_)
+                    if runs and runs[-1][0] == o_:
+                        runs[-1][2] = y_
+                    else:
+                        runs.append([o_, y_, y_])
+                for i_, (o_, a_, z_) in enumerate(runs):
+                    lo_ = y0_ if i_ == 0 else a_
+                    hi_ = y1_ if i_ == len(runs) - 1 else runs[i_ + 1][1] - 1
+                    newus[o_].append((mk_, fam_, lo_, hi_))
+            b["us"] = newus.pop(key, [])
+            for o_, lst in newus.items():
+                bikes[o_]["us"] += lst
+        if named_code(main) and not en_main and not renamed_main and any(s[1] == b["model"] for s in split_log):
+            b["model"] = f"{b['model']} {main['code']}"         # Gold Wing -> Gold Wing GL1800
+            renamed_main = True
+    for b in bikes.values():
+        b["mot_years"] = [famy[(x[0], x[1])] for x in b["mot"] if famy.get((x[0], x[1]), (None,))[0]]
+        b["us_complaints"] = sum(v for mk_, fam_, y0_, y1_ in b["us"] for y_, v in cyears[(mk_, fam_)].items()
+                                 if (y0_ is None or (y_ or 0) >= y0_) and (y1_ is None or (y_ or 0) <= y1_))
+        b["us_recalls"] = {c_ for mk_, fam_, y0_, y1_ in b["us"] for y_, c_ in ryears[(mk_, fam_)]
+                           if (y0_ is None or (y_ or 0) >= y0_) and (y1_ is None or (y_ or 0) <= y1_)}
+        yy = [y_ for mk_, fam_, y0_, y1_ in b["us"] for y_ in cyears[(mk_, fam_)]
+              if y_ and (y0_ is None or y_ >= y0_) and (y1_ is None or y_ <= y1_)]
+        if b["us"] and not b.get("era"):
+            b["years"] = set(yy) or b["years"]
+    print(f"engine-size splits: {len(split_log)}")
+    out.execute("create table splits (make TEXT, from_model TEXT, family TEXT, cc INT, tests INT, to_model TEXT)")
+    out.executemany("insert into splits values (?,?,?,?,?,?)", split_log)
     out.execute("create table merges (make TEXT, merged_name TEXT, into_name TEXT)")
     out.executemany("insert into merges values (?,?,?)", merge_log)
 
     # ---- write
     bid = 0
     used_slugs = set()
+    ids = {}
     for key, b in sorted(bikes.items(), key=lambda kv: (kv[1]["make"], kv[1]["model"])):
         bid += 1
         if b["model"].isupper() and len(b["model"]) > 3:      # "TIGER 1050 ABS SE" -> "Tiger 1050"
@@ -580,6 +866,9 @@ def main():
             raw = b["model"].split()
             keep = [w for w in raw if any(w.upper().replace("-", "") == "".join(tok(w)) and t in tok(w) for t in base)] or raw
             b["model"] = " ".join(w if re.search(r"\d", w) else w.capitalize() for w in keep[:max(1, len(base))])
+        b["model"] = KNOWN_AS.get((make_key(b["make"]), b["model"]), b["model"])
+        if b.get("umbrella"):     # "BMW R1150 (all versions)"
+            b["model"] = f"{b['model']} (all versions)"
         if b.get("era"):          # an older generation sharing the name: "Z900 (1972-1981)"
             y0, y1 = min(y for y, _ in b["mot_years"]), max(y for _, y in b["mot_years"])
             b["model"] = f"{b['model']} ({y0}-{y1})"
@@ -594,12 +883,17 @@ def main():
                      len({(x[0], x[2]) for x in b["rec"]}), sum(x[2] for x in b["mot"]), b["fleet"][0], len(b["inv"]),
                      ys[0] if ys else None, ys[-1] if ys else None))
         out.executemany("insert into aliases values (?,?,?,?,?,?)", [(bid,) + a for a in b["aliases"]])
-        out.executemany("insert into bike_us_models values (?,?,?)", [(bid,) + u for u in b["us"]])
+        out.executemany("insert into bike_us_models values (?,?,?,?,?)", [(bid,) + u for u in b["us"]])
+        ids[key] = bid
         out.executemany("insert into bike_mot values (?,?,?,?,?)", [(bid,) + x for x in b["mot"]])
         out.executemany("insert into bike_recalls values (?,?,?,?,?,?)", [(bid,) + x for x in b["rec"]])
         out.executemany("insert into bike_investigations values (?,?)", [(bid, a) for a in sorted(b["inv"])])
         if b["fleet"][2]:
             out.execute("insert into bike_uk_fleet values (?,?,?,?)", (bid,) + tuple(b["fleet"]))
+    for key, b in bikes.items():
+        for m_ in b.get("umbrella") or []:
+            if m_ in ids:
+                out.execute("insert into bike_family_members values (?,?)", (ids[key], ids[m_]))
     # the learned factory codes, with the records that taught them (for review)
     out.execute("create table factory_codes (make TEXT, code TEXT, bike_model TEXT, label TEXT, evidence TEXT)")
     for (mk, code), key in codes.map.items():
