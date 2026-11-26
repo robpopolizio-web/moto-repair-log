@@ -23,7 +23,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CAT = os.path.join(ROOT, "data", "catalog.sqlite")
 NHTSA = os.path.join(ROOT, "data", "nhtsa", "motorcycles.sqlite")
 OUT = sys.argv[1] if len(sys.argv) > 1 else "."
-DOMAIN = "motoercycleproblems.com"   # spelling still open in business-info.md
+DOMAIN = "motorcycleproblems.com"
 
 # Thresholds: a model page needs some data to say anything; a years page needs several years of it
 MODEL_MIN = dict(mot=1000, complaints=5, recalls=3)
@@ -338,7 +338,7 @@ def main():
         add(name, f"/blog/{bslug}/", "Blog post", kw, name, name,
             f"{name}, from official recall, complaint and inspection records plus owner repair logs.",
             "To build (wave 1)" if bslug == "motorcycle-reliability-statistics" else "Planned", note, parent="Blog")
-    add("About", "/about/", "About page", "about motoercycleproblems.com", "About this database",
+    add("About", "/about/", "About page", "about motorcycleproblems.com", "About this database",
         "About the Motorcycle Reliability Database",
         "Who runs the site, how the data is collected, what is excluded, and how it is funded.",
         "Planned", "Independence statement (market-research.md 4a.5). Owner name stays out of the URL.", parent="Home")
@@ -346,7 +346,7 @@ def main():
         "How we measure motorcycle reliability", "How We Measure Motorcycle Reliability",
         "Our definition of reliability, every data source and what it measures, sample-size rules, and how each figure is calculated.",
         "To build (wave 1)", "Build first: every other page cites it (market-research.md, Where to start).", parent="About")
-    add("Contact", "/contact/", "Contact page", "contact motoercycleproblems.com", "Contact", "Contact Us",
+    add("Contact", "/contact/", "Contact page", "contact motorcycleproblems.com", "Contact", "Contact Us",
         "Report a data error, send a correction or ask about the dataset.", "Planned",
         "No sales language (business-info.md). Data corrections and press.", parent="Home")
 
@@ -472,7 +472,7 @@ def main():
     L.append('  home --> contact["Contact"]')
     L.append("```")
     with open(os.path.join(OUT, "site-architecture-diagram.md"), "w") as f:
-        f.write("# Site architecture: motoercycleproblems.com\n\n")
+        f.write("# Site architecture: motorcycleproblems.com\n\n")
         f.write(f"Total pages: {len(rows)}\n\n")
         for t, k in counts.items():
             f.write(f"- {t}: {k}\n")
